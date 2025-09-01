@@ -220,9 +220,25 @@ export class DatabaseStorage implements IStorage {
   // Project member operations
   async addProjectMember(projectId: number, userId: string, role: string): Promise<ProjectMember> {
     // Check if user is already a member
-    const existingMember = await this.getUserProjectRole(userId, projectId);
-    if (existingMember) {
-      throw new Error("User is already a member of this project");
+    const existingRole = await this.getUserProjectRole(userId, projectId);
+    if (existingRole) {
+      // If user exists and role is different, update the role
+      if (existingRole !== role) {
+        const [member] = await db
+          .select()
+          .from(projectMembers)
+          .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)));
+        
+        if (member) {
+          return await this.updateProjectMemberRole(member.id, role) || member;
+        }
+      }
+      // If same role, return existing member
+      const [existingMember] = await db
+        .select()
+        .from(projectMembers)
+        .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)));
+      return existingMember;
     }
     
     const [newMember] = await db.insert(projectMembers).values({
