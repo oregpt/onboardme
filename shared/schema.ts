@@ -56,6 +56,8 @@ export const flowBoxes = pgTable("flow_boxes", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   agentInstructions: text("agent_instructions"), // Optional AI instructions for this flow
+  resourceLinks: jsonb("resource_links").default(sql`'[]'::jsonb`), // Array of resource links
+  resourceAttachments: jsonb("resource_attachments").default(sql`'[]'::jsonb`), // Array of resource attachments
   position: integer("position").notNull(), // Order in the flow
   isVisible: boolean("is_visible").default(true),
   createdAt: timestamp("created_at").defaultNow(),

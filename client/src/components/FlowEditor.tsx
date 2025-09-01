@@ -42,6 +42,8 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
   const [editingTitle, setEditingTitle] = useState("");
   const [editingDescription, setEditingDescription] = useState("");
   const [editingAgentInstructions, setEditingAgentInstructions] = useState("");
+  const [editingResourceLinks, setEditingResourceLinks] = useState<Array<{title: string, url: string}>>([]);
+  const [editingResourceAttachments, setEditingResourceAttachments] = useState<Array<{name: string, url: string, category: string}>>([]);
 
   // Fetch steps for each flow box
   const { data: allSteps } = useQuery<Step[]>({
@@ -176,6 +178,8 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
     setEditingTitle(flowBox.title);
     setEditingDescription(flowBox.description || "");
     setEditingAgentInstructions((flowBox as any).agentInstructions || "");
+    setEditingResourceLinks((flowBox as any).resourceLinks || []);
+    setEditingResourceAttachments((flowBox as any).resourceAttachments || []);
   };
 
   const cancelEditing = () => {
@@ -183,6 +187,8 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
     setEditingTitle("");
     setEditingDescription("");
     setEditingAgentInstructions("");
+    setEditingResourceLinks([]);
+    setEditingResourceAttachments([]);
   };
 
   const saveEdit = (id: number) => {
@@ -191,7 +197,9 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
       updates: { 
         title: editingTitle.trim() || "Untitled Flow Box",
         description: editingDescription.trim(),
-        agentInstructions: editingAgentInstructions.trim()
+        agentInstructions: editingAgentInstructions.trim(),
+        resourceLinks: editingResourceLinks,
+        resourceAttachments: editingResourceAttachments
       }
     });
     cancelEditing();
@@ -305,6 +313,112 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                         rows={3}
                         data-testid={`textarea-flowbox-agent-instructions-${flowBox.id}`}
                       />
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Resource Links (Optional)</label>
+                      <div className="space-y-2">
+                        {editingResourceLinks.map((link, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input
+                              placeholder="Link title"
+                              value={link.title}
+                              onChange={(e) => {
+                                const newLinks = [...editingResourceLinks];
+                                newLinks[index].title = e.target.value;
+                                setEditingResourceLinks(newLinks);
+                              }}
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="URL"
+                              value={link.url}
+                              onChange={(e) => {
+                                const newLinks = [...editingResourceLinks];
+                                newLinks[index].url = e.target.value;
+                                setEditingResourceLinks(newLinks);
+                              }}
+                              className="flex-1"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newLinks = editingResourceLinks.filter((_, i) => i !== index);
+                                setEditingResourceLinks(newLinks);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingResourceLinks([...editingResourceLinks, { title: "", url: "" }])}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Resource Link
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Resource Attachments (Optional)</label>
+                      <div className="space-y-2">
+                        {editingResourceAttachments.map((attachment, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input
+                              placeholder="File name"
+                              value={attachment.name}
+                              onChange={(e) => {
+                                const newAttachments = [...editingResourceAttachments];
+                                newAttachments[index].name = e.target.value;
+                                setEditingResourceAttachments(newAttachments);
+                              }}
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="File URL"
+                              value={attachment.url}
+                              onChange={(e) => {
+                                const newAttachments = [...editingResourceAttachments];
+                                newAttachments[index].url = e.target.value;
+                                setEditingResourceAttachments(newAttachments);
+                              }}
+                              className="flex-1"
+                            />
+                            <Input
+                              placeholder="Category"
+                              value={attachment.category}
+                              onChange={(e) => {
+                                const newAttachments = [...editingResourceAttachments];
+                                newAttachments[index].category = e.target.value;
+                                setEditingResourceAttachments(newAttachments);
+                              }}
+                              className="w-32"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newAttachments = editingResourceAttachments.filter((_, i) => i !== index);
+                                setEditingResourceAttachments(newAttachments);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingResourceAttachments([...editingResourceAttachments, { name: "", url: "", category: "" }])}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Resource Attachment
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
