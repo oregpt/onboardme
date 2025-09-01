@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import Anthropic from '@anthropic-ai/sdk';
-import type { Guide, FlowBox, Step } from "@shared/schema";
+import type { Guide, FlowBox, Step, Project, InsertConversationHistory } from "@shared/schema";
+import type { IStorage } from "./storage";
 
 // AI Provider types
 export type AIProvider = 'openai' | 'anthropic' | 'xai';
@@ -29,6 +30,14 @@ export interface KnowledgeContext {
   faqFiles: any[];
   otherHelpFiles: any[];
   agentInstructions?: string | null;
+}
+
+// Conversation history context interface
+export interface ConversationContext {
+  project: Project;
+  conversationId: string;
+  userId: string;
+  storage: IStorage;
 }
 
 // OpenAI client
@@ -142,7 +151,8 @@ export class AIService {
   static async generateResponse(
     messages: ChatMessage[],
     context: KnowledgeContext,
-    provider: AIProvider = 'anthropic'
+    provider: AIProvider = 'anthropic',
+    conversationContext?: ConversationContext
   ): Promise<AIResponse> {
     const contextText = KnowledgeBaseService.buildContext(context);
     
@@ -166,17 +176,77 @@ Guidelines:
 
     const allMessages = [systemMessage, ...messages];
 
+    // Store user message in conversation history if enabled
+    if (conversationContext) {
+      const { project, conversationId, userId, storage } = conversationContext;
+      const settings = project.settings as any;
+      
+      if (settings?.conversationHistoryEnabled) {
+        const lastUserMessage = messages[messages.length - 1];
+        if (lastUserMessage && lastUserMessage.role === 'user') {
+          await storage.storeConversationMessage({
+            projectId: project.id,
+            guideId: context.guide.id,
+            stepId: context.currentStep?.id || null,
+            flowBoxId: context.flowBox?.id || null,
+            userId: userId,
+            conversationId: conversationId,
+            messageRole: 'user',
+            messageContent: lastUserMessage.content,
+            aiProvider: null,
+            aiModel: null,
+            contextData: {
+              selectedFlow: context.flowBox?.id || 'all',
+              provider: provider,
+            },
+          });
+        }
+      }
+    }
+
     try {
+      let response: AIResponse;
+      
       switch (provider) {
         case 'openai':
-          return await this.callOpenAI(allMessages);
+          response = await this.callOpenAI(allMessages);
+          break;
         case 'anthropic':
-          return await this.callAnthropic(allMessages);
+          response = await this.callAnthropic(allMessages);
+          break;
         case 'xai':
-          return await this.callXAI(allMessages);
+          response = await this.callXAI(allMessages);
+          break;
         default:
           throw new Error(`Unsupported AI provider: ${provider}`);
       }
+
+      // Store AI response in conversation history if enabled
+      if (conversationContext) {
+        const { project, conversationId, userId, storage } = conversationContext;
+        const settings = project.settings as any;
+        
+        if (settings?.conversationHistoryEnabled) {
+          await storage.storeConversationMessage({
+            projectId: project.id,
+            guideId: context.guide.id,
+            stepId: context.currentStep?.id || null,
+            flowBoxId: context.flowBox?.id || null,
+            userId: userId,
+            conversationId: conversationId,
+            messageRole: 'assistant',
+            messageContent: response.content,
+            aiProvider: response.provider,
+            aiModel: response.model,
+            contextData: {
+              selectedFlow: context.flowBox?.id || 'all',
+              provider: provider,
+            },
+          });
+        }
+      }
+
+      return response;
     } catch (error) {
       console.error(`AI Service Error (${provider}):`, error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

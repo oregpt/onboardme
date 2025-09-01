@@ -6,8 +6,15 @@ import {
   qaConversations,
   knowledgeBase,
   users,
+  projects,
+  projectMembers,
+  conversationHistory,
   type User,
   type UpsertUser,
+  type Project,
+  type InsertProject,
+  type ProjectMember,
+  type InsertProjectMember,
   type Guide,
   type InsertGuide,
   type FlowBox,
@@ -20,6 +27,8 @@ import {
   type InsertQAConversation,
   type KnowledgeBase,
   type InsertKnowledgeBase,
+  type ConversationHistory,
+  type InsertConversationHistory,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -29,11 +38,25 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
+  // Project operations
+  createProject(project: InsertProject): Promise<Project>;
+  getProjects(userId: string): Promise<Project[]>;
+  getProject(id: number): Promise<Project | undefined>;
+  getProjectBySlug(slug: string): Promise<Project | undefined>;
+  updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
+  
+  // Project member operations
+  addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
+  getProjectMembers(projectId: number): Promise<ProjectMember[]>;
+  getUserProjectRole(userId: string, projectId: number): Promise<string | undefined>;
+  removeProjectMember(projectId: number, userId: string): Promise<boolean>;
+  
   // Guide operations
   createGuide(guide: InsertGuide): Promise<Guide>;
-  getGuides(): Promise<Guide[]>;
+  getGuides(projectId?: number): Promise<Guide[]>;
   getGuide(id: number): Promise<Guide | undefined>;
-  getGuideBySlug(slug: string): Promise<Guide | undefined>;
+  getGuideBySlug(slug: string, projectId?: number): Promise<Guide | undefined>;
   updateGuide(id: number, updates: Partial<InsertGuide>): Promise<Guide | undefined>;
   deleteGuide(id: number): Promise<boolean>;
   
@@ -67,6 +90,10 @@ export interface IStorage {
   // Knowledge base operations
   createKnowledgeEntry(entry: InsertKnowledgeBase): Promise<KnowledgeBase>;
   getKnowledgeByGuide(guideId: number): Promise<KnowledgeBase[]>;
+  
+  // Conversation history operations
+  storeConversationMessage(message: InsertConversationHistory): Promise<ConversationHistory>;
+  getConversationHistory(projectId: number, conversationId?: string): Promise<ConversationHistory[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -91,14 +118,95 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // Project operations
+  async createProject(project: InsertProject): Promise<Project> {
+    const [newProject] = await db.insert(projects).values(project).returning();
+    return newProject;
+  }
+
+  async getProjects(userId: string): Promise<Project[]> {
+    return await db
+      .select({
+        id: projects.id,
+        name: projects.name,
+        description: projects.description,
+        slug: projects.slug,
+        ownerId: projects.ownerId,
+        settings: projects.settings,
+        isActive: projects.isActive,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+      })
+      .from(projects)
+      .innerJoin(projectMembers, eq(projects.id, projectMembers.projectId))
+      .where(and(eq(projectMembers.userId, userId), eq(projects.isActive, true)))
+      .orderBy(desc(projects.createdAt));
+  }
+
+  async getProject(id: number): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project;
+  }
+
+  async getProjectBySlug(slug: string): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.slug, slug));
+    return project;
+  }
+
+  async updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined> {
+    const [updatedProject] = await db
+      .update(projects)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(projects.id, id))
+      .returning();
+    return updatedProject;
+  }
+
+  async deleteProject(id: number): Promise<boolean> {
+    const result = await db.delete(projects).where(eq(projects.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Project member operations
+  async addProjectMember(member: InsertProjectMember): Promise<ProjectMember> {
+    const [newMember] = await db.insert(projectMembers).values(member).returning();
+    return newMember;
+  }
+
+  async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
+    return await db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.projectId, projectId));
+  }
+
+  async getUserProjectRole(userId: string, projectId: number): Promise<string | undefined> {
+    const [member] = await db
+      .select({ role: projectMembers.role })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.userId, userId), eq(projectMembers.projectId, projectId)));
+    return member?.role ?? undefined;
+  }
+
+  async removeProjectMember(projectId: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
   // Guide operations
   async createGuide(guide: InsertGuide): Promise<Guide> {
     const [newGuide] = await db.insert(guides).values(guide).returning();
     return newGuide;
   }
 
-  async getGuides(): Promise<Guide[]> {
-    return await db.select().from(guides).orderBy(desc(guides.createdAt));
+  async getGuides(projectId?: number): Promise<Guide[]> {
+    const query = db.select().from(guides);
+    if (projectId) {
+      query.where(eq(guides.projectId, projectId));
+    }
+    return await query.orderBy(desc(guides.createdAt));
   }
 
   async getGuide(id: number): Promise<Guide | undefined> {
@@ -106,8 +214,12 @@ export class DatabaseStorage implements IStorage {
     return guide;
   }
 
-  async getGuideBySlug(slug: string): Promise<Guide | undefined> {
-    const [guide] = await db.select().from(guides).where(eq(guides.slug, slug));
+  async getGuideBySlug(slug: string, projectId?: number): Promise<Guide | undefined> {
+    const conditions = [eq(guides.slug, slug)];
+    if (projectId) {
+      conditions.push(eq(guides.projectId, projectId));
+    }
+    const [guide] = await db.select().from(guides).where(and(...conditions));
     return guide;
   }
 
@@ -122,7 +234,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGuide(id: number): Promise<boolean> {
     const result = await db.delete(guides).where(eq(guides.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Flow operations
@@ -158,7 +270,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFlowBox(id: number): Promise<boolean> {
     const result = await db.delete(flowBoxes).where(eq(flowBoxes.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Step operations
@@ -214,7 +326,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStep(id: number): Promise<boolean> {
     const result = await db.delete(steps).where(eq(steps.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Progress operations
@@ -368,6 +480,24 @@ export class DatabaseStorage implements IStorage {
       .from(knowledgeBase)
       .where(eq(knowledgeBase.guideId, guideId))
       .orderBy(desc(knowledgeBase.createdAt));
+  }
+
+  // Conversation history operations
+  async storeConversationMessage(message: InsertConversationHistory): Promise<ConversationHistory> {
+    const [newMessage] = await db.insert(conversationHistory).values(message).returning();
+    return newMessage;
+  }
+
+  async getConversationHistory(projectId: number, conversationId?: string): Promise<ConversationHistory[]> {
+    const conditions = [eq(conversationHistory.projectId, projectId)];
+    if (conversationId) {
+      conditions.push(eq(conversationHistory.conversationId, conversationId));
+    }
+    return await db
+      .select()
+      .from(conversationHistory)
+      .where(and(...conditions))
+      .orderBy(asc(conversationHistory.createdAt));
   }
 }
 

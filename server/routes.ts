@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema } from "@shared/schema";
-import { AIService, KnowledgeContext, type AIProvider } from "./aiService";
+import { AIService, KnowledgeContext, type AIProvider, type ConversationContext } from "./aiService";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -394,12 +394,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         agentInstructions: flowBox ? (flowBox as any).agentInstructions : null
       };
 
+      // Get project information for conversation history
+      const project = await storage.getProject(guide.projectId!);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Build conversation context
+      const conversationId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const conversationContext: ConversationContext = {
+        project,
+        conversationId,
+        userId: userId,
+        storage
+      };
+
       // Generate AI response
       const chatMessages = [{ role: 'user' as const, content: message }];
       const response = await AIService.generateResponse(
         chatMessages,
         context,
-        provider as AIProvider
+        provider as AIProvider,
+        conversationContext
       );
 
       res.json(response);

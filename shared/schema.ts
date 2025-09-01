@@ -35,12 +35,35 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Projects for multi-tenancy
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  ownerId: varchar("owner_id").notNull(),
+  settings: jsonb("settings").default(sql`'{"conversationHistoryEnabled": false}'::jsonb`),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Project members for access control
+export const projectMembers = pgTable("project_members", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: varchar("role", { length: 50 }).default("member"), // owner, admin, member, viewer
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
 // Onboarding Guides
 export const guides = pgTable("guides", {
   id: serial("id").primaryKey(),
+  projectId: integer("project_id"), // Nullable initially for migration
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
-  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  slug: varchar("slug", { length: 100 }).notNull(),
   globalInformation: text("global_information"), // Guide-wide content
   personas: jsonb("personas").default(sql`'[]'::jsonb`), // Array of persona definitions
   resourceLinks: jsonb("resource_links").default(sql`'[]'::jsonb`), // Array of resource links
@@ -104,6 +127,23 @@ export const qaConversations = pgTable("qa_conversations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Conversation history for AI training (configurable per project)
+export const conversationHistory = pgTable("conversation_history", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  guideId: integer("guide_id"),
+  stepId: integer("step_id"),
+  flowBoxId: integer("flow_box_id"),
+  userId: varchar("user_id").notNull(),
+  conversationId: varchar("conversation_id").notNull(), // Group related messages
+  messageRole: varchar("message_role", { length: 20 }).notNull(), // user, assistant, system
+  messageContent: text("message_content").notNull(),
+  aiProvider: varchar("ai_provider", { length: 50 }), // claude, gpt-5, grok
+  aiModel: varchar("ai_model", { length: 100 }),
+  contextData: jsonb("context_data"), // Additional context like selected flow, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Knowledge base entries (for AI context)
 export const knowledgeBase = pgTable("knowledge_base", {
   id: serial("id").primaryKey(),
@@ -116,11 +156,37 @@ export const knowledgeBase = pgTable("knowledge_base", {
 });
 
 // Relations
-export const guidesRelations = relations(guides, ({ many }) => ({
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [projects.ownerId],
+    references: [users.id],
+  }),
+  members: many(projectMembers),
+  guides: many(guides),
+  conversationHistory: many(conversationHistory),
+}));
+
+export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectMembers.projectId],
+    references: [projects.id],
+  }),
+  user: one(users, {
+    fields: [projectMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const guidesRelations = relations(guides, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [guides.projectId],
+    references: [projects.id],
+  }),
   flowBoxes: many(flowBoxes),
   userProgress: many(userProgress),
   qaConversations: many(qaConversations),
   knowledgeBase: many(knowledgeBase),
+  conversationHistory: many(conversationHistory),
 }));
 
 export const flowBoxesRelations = relations(flowBoxes, ({ one, many }) => ({
@@ -150,9 +216,38 @@ export const userProgressRelations = relations(userProgress, ({ one }) => ({
   }),
 }));
 
+export const conversationHistoryRelations = relations(conversationHistory, ({ one }) => ({
+  project: one(projects, {
+    fields: [conversationHistory.projectId],
+    references: [projects.id],
+  }),
+  guide: one(guides, {
+    fields: [conversationHistory.guideId],
+    references: [guides.id],
+  }),
+  step: one(steps, {
+    fields: [conversationHistory.stepId],
+    references: [steps.id],
+  }),
+  flowBox: one(flowBoxes, {
+    fields: [conversationHistory.flowBoxId],
+    references: [flowBoxes.id],
+  }),
+  user: one(users, {
+    fields: [conversationHistory.userId],
+    references: [users.id],
+  }),
+}));
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
+
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type InsertProjectMember = typeof projectMembers.$inferInsert;
 
 export type Guide = typeof guides.$inferSelect;
 export type InsertGuide = typeof guides.$inferInsert;
@@ -172,10 +267,16 @@ export type InsertQAConversation = typeof qaConversations.$inferInsert;
 export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
 export type InsertKnowledgeBase = typeof knowledgeBase.$inferInsert;
 
+export type ConversationHistory = typeof conversationHistory.$inferSelect;
+export type InsertConversationHistory = typeof conversationHistory.$inferInsert;
+
 // Validation schemas
+export const insertProjectSchema = createInsertSchema(projects);
+export const insertProjectMemberSchema = createInsertSchema(projectMembers);
 export const insertGuideSchema = createInsertSchema(guides);
 export const insertFlowBoxSchema = createInsertSchema(flowBoxes);
 export const insertStepSchema = createInsertSchema(steps);
 export const insertUserProgressSchema = createInsertSchema(userProgress);
 export const insertQAConversationSchema = createInsertSchema(qaConversations);
 export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase);
+export const insertConversationHistorySchema = createInsertSchema(conversationHistory);
