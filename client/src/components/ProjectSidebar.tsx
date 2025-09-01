@@ -66,11 +66,11 @@ export function ProjectSidebar({ currentProjectId }: ProjectSidebarProps) {
 
   return (
     <div className={cn(
-      "h-full bg-slate-900 border-r border-slate-700 flex flex-col transition-all duration-300",
+      "h-full bg-gray-800 border-r border-gray-600 flex flex-col transition-all duration-300",
       isCollapsed ? "w-16" : "w-64"
     )}>
       {/* Header */}
-      <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-600 flex items-center justify-between">
         {!isCollapsed && (
           <h2 className="text-white font-semibold text-lg">Projects</h2>
         )}
@@ -95,8 +95,8 @@ export function ProjectSidebar({ currentProjectId }: ProjectSidebarProps) {
               className={cn(
                 "w-full justify-start h-auto p-3 text-left transition-colors",
                 currentProjectId === project.id
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-300 hover:text-white hover:bg-slate-700",
+                  ? "bg-gray-600 text-white"
+                  : "text-gray-300 hover:text-white hover:bg-gray-700",
                 isCollapsed && "justify-center p-2"
               )}
               onClick={() => handleProjectClick(project.id)}
@@ -135,11 +135,11 @@ export function ProjectSidebar({ currentProjectId }: ProjectSidebarProps) {
       </ScrollArea>
 
       {/* Footer Actions */}
-      <div className="p-2 border-t border-slate-700">
+      <div className="p-2 border-t border-gray-600">
         <Button
           variant="ghost"
           className={cn(
-            "w-full justify-start text-slate-300 hover:text-white hover:bg-slate-700",
+            "w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700",
             isCollapsed && "justify-center"
           )}
           onClick={() => setLocation("/admin")}

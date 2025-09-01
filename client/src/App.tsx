@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/AppLayout";
 import NotFound from "@/pages/not-found";
 import SimpleLanding from "@/pages/SimpleLanding";
 import Dashboard from "@/pages/Dashboard";
+import ProjectDashboard from "@/pages/ProjectDashboard";
 import GuideEditor from "@/pages/GuideEditor";
 import GuideViewer from "@/pages/GuideViewer";
 import Guides from "@/pages/Guides";
@@ -37,7 +38,7 @@ function Router() {
         <AppLayout>
           <Switch>
             <Route path="/" component={Dashboard} />
-            <Route path="/project/:projectId" component={Admin} />
+            <Route path="/project/:projectId" component={ProjectDashboard} />
             <Route path="/guides" component={Guides} />
             <Route path="/users" component={UserProgress} />
             <Route path="/admin/:projectId" component={Admin} />
