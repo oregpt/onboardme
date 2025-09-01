@@ -212,12 +212,6 @@ export default function Admin() {
               </p>
             </div>
           </div>
-          <Link href="/admin/database">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Database className="w-4 h-4" />
-              Database Management
-            </Button>
-          </Link>
         </div>
 
         {/* Main Content */}
