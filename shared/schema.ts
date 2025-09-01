@@ -96,6 +96,7 @@ export const steps = pgTable("steps", {
   personaVariations: jsonb("persona_variations").default(sql`'{}'::jsonb`), // Persona-specific content
   position: integer("position").notNull(), // Order within flow box
   isVisible: boolean("is_visible").default(true),
+  isCritical: boolean("is_critical").default(false), // Flag for critical steps
   attachments: jsonb("attachments").default(sql`'[]'::jsonb`), // File attachments
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

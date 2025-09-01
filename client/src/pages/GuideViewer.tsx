@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide, FlowBox, Step, UserProgress } from "@shared/schema";
-import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download, Brain } from "lucide-react";
+import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download, Brain, AlertTriangle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 
@@ -378,7 +378,15 @@ export default function GuideViewer() {
                               </div>
                               
                               <div className="flex-1">
-                                <h4 className="font-medium text-foreground">{step.title}</h4>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-foreground">{step.title}</h4>
+                                  {step.isCritical && (
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-md text-xs">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      Critical
+                                    </div>
+                                  )}
+                                </div>
                                 {step.content && (
                                   <div className="mt-2 prose prose-sm max-w-none">
                                     <ReactMarkdown>

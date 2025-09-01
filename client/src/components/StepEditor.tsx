@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
     title: step.title,
     content: step.content || "",
     description: "",
+    isCritical: step.isCritical || false,
     attachments: (step.attachments as any[]) || [],
   });
   const [editorWidth, setEditorWidth] = useState(384); // Starting at w-96 equivalent (24rem = 384px)
@@ -33,6 +35,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
       title: step.title,
       content: step.content || "",
       description: "",
+      isCritical: step.isCritical || false,
       attachments: (step.attachments as any[]) || [],
     });
   }, [step]);
@@ -138,6 +141,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
     updateStepMutation.mutate({
       title: stepData.title,
       content: stepData.content,
+      isCritical: stepData.isCritical,
       attachments: stepData.attachments,
     });
   };
@@ -231,9 +235,28 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
               id="step-title"
               value={stepData.title}
               onChange={(e) => setStepData(prev => ({ ...prev, title: e.target.value }))}
+              onKeyDown={(e) => {
+                // Allow native browser shortcuts to work (Ctrl+Z, Ctrl+Y, etc.)
+                if (e.ctrlKey || e.metaKey) {
+                  e.stopPropagation();
+                }
+              }}
               placeholder="Enter step title..."
               data-testid="input-step-title"
             />
+          </div>
+
+          {/* Critical Flag */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="step-critical"
+              checked={stepData.isCritical}
+              onCheckedChange={(checked) => setStepData(prev => ({ ...prev, isCritical: !!checked }))}
+              data-testid="checkbox-step-critical"
+            />
+            <Label htmlFor="step-critical" className="text-sm font-medium text-foreground">
+              Mark as Critical Step
+            </Label>
           </div>
 
           {/* Content Editor */}
@@ -280,6 +303,12 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
                 id="step-content"
                 value={stepData.content}
                 onChange={(e) => setStepData(prev => ({ ...prev, content: e.target.value }))}
+                onKeyDown={(e) => {
+                  // Allow native browser shortcuts to work (Ctrl+Z, Ctrl+Y, etc.)
+                  if (e.ctrlKey || e.metaKey) {
+                    e.stopPropagation();
+                  }
+                }}
                 placeholder="Enter markdown content..."
                 className="border-0 focus-visible:ring-0 font-mono text-sm resize-none"
                 style={{ height: `${Math.max(120, editorWidth / 3)}px` }}
