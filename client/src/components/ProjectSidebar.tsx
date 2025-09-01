@@ -134,21 +134,6 @@ export function ProjectSidebar({ currentProjectId }: ProjectSidebarProps) {
         </div>
       </ScrollArea>
 
-      {/* Footer Actions */}
-      <div className="p-2 border-t border-gray-600">
-        <Button
-          variant="ghost"
-          className={cn(
-            "w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700",
-            isCollapsed && "justify-center"
-          )}
-          onClick={() => setLocation("/admin")}
-          data-testid="button-admin-panel"
-        >
-          <Settings size={16} className={cn(!isCollapsed && "mr-2")} />
-          {!isCollapsed && "Admin Panel"}
-        </Button>
-      </div>
     </div>
   );
 }
