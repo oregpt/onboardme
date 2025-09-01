@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Settings, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, BookOpen, Users, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Project {
@@ -21,7 +21,7 @@ interface ProjectSidebarProps {
 
 export function ProjectSidebar({ currentProjectId }: ProjectSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
   const { data: projects = [], isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects"],
@@ -85,8 +85,65 @@ export function ProjectSidebar({ currentProjectId }: ProjectSidebarProps) {
         </Button>
       </div>
 
+      {/* Main Navigation */}
+      <div className="p-2 space-y-1">
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700",
+            location === "/" && "bg-gray-600 text-white",
+            isCollapsed && "justify-center p-2"
+          )}
+          onClick={() => setLocation("/")}
+          data-testid="nav-dashboard"
+        >
+          <Home size={16} className={cn(!isCollapsed && "mr-2")} />
+          {!isCollapsed && "Dashboard"}
+        </Button>
+
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700",
+            location === "/guides" && "bg-gray-600 text-white",
+            isCollapsed && "justify-center p-2"
+          )}
+          onClick={() => setLocation("/guides")}
+          data-testid="nav-guides"
+        >
+          <BookOpen size={16} className={cn(!isCollapsed && "mr-2")} />
+          {!isCollapsed && "All Guides"}
+        </Button>
+
+        <Button
+          variant="ghost"
+          className={cn(
+            "w-full justify-start text-gray-300 hover:text-white hover:bg-gray-700",
+            location === "/users" && "bg-gray-600 text-white",
+            isCollapsed && "justify-center p-2"
+          )}
+          onClick={() => setLocation("/users")}
+          data-testid="nav-users"
+        >
+          <Users size={16} className={cn(!isCollapsed && "mr-2")} />
+          {!isCollapsed && "User Progress"}
+        </Button>
+      </div>
+
+      {/* Divider */}
+      <div className="mx-4 border-t border-gray-600"></div>
+
+      {/* Projects Section Header */}
+      <div className="p-4 pb-2">
+        {!isCollapsed && (
+          <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">
+            Projects
+          </h3>
+        )}
+      </div>
+
       {/* Projects List */}
-      <ScrollArea className="flex-1 p-2">
+      <ScrollArea className="flex-1 px-2">
         <div className="space-y-2">
           {projects.map((project) => (
             <Button
