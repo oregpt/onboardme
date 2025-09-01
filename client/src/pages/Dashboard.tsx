@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide } from "@shared/schema";
-import { Plus, MoreHorizontal, Eye, Edit, Trash2, BookOpen, Users, BarChart } from "lucide-react";
+import { Plus, MoreHorizontal, Eye, Edit, Trash2, BookOpen, Users, BarChart, Settings } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,12 +65,20 @@ export default function Dashboard() {
                 Welcome back, {user?.firstName || user?.email}
               </p>
             </div>
-            <Link href="/editor">
-              <Button data-testid="button-create-guide">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Guide
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/admin/1">
+                <Button variant="outline" data-testid="button-admin">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
+              <Link href="/editor">
+                <Button data-testid="button-create-guide">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Guide
+                </Button>
+              </Link>
+            </div>
           </div>
         </header>
 

@@ -53,7 +53,7 @@ export const projectMembers = pgTable("project_members", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull(),
   userId: varchar("user_id").notNull(),
-  role: varchar("role", { length: 50 }).default("member"), // owner, admin, member, viewer
+  role: varchar("role", { length: 50 }).default("user"), // admin, creator, user
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 

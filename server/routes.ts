@@ -22,6 +22,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Project management routes
+  app.get('/api/projects', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const projects = await storage.getProjects(userId);
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  app.get('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      // Check if user has access to this project
+      const role = await storage.getUserProjectRole(userId, projectId);
+      if (!role) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json({ ...project, userRole: role });
+    } catch (error) {
+      console.error("Error fetching project:", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  app.put('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      // Check if user is admin
+      const role = await storage.getUserProjectRole(userId, projectId);
+      if (role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const updatedProject = await storage.updateProject(projectId, req.body);
+      if (!updatedProject) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      res.json(updatedProject);
+    } catch (error) {
+      console.error("Error updating project:", error);
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  app.get('/api/projects/:id/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      // Check if user has access to this project
+      const role = await storage.getUserProjectRole(userId, projectId);
+      if (!role) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const members = await storage.getProjectMembers(projectId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching project members:", error);
+      res.status(500).json({ message: "Failed to fetch project members" });
+    }
+  });
+
   // Guide management routes
   app.get('/api/guides', async (req, res) => {
     try {
