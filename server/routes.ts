@@ -211,6 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if user is admin or platform admin
       const role = await storage.getUserProjectRole(userId, projectId);
+      console.log(`Add member permission check - User: ${userId}, ProjectId: ${projectId}, Role: ${role}, isPlatformAdmin: ${user?.isPlatformAdmin}`);
       if (role !== 'admin' && !user?.isPlatformAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
