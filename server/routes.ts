@@ -207,10 +207,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const projectId = parseInt(req.params.id);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
-      // Check if user is admin
+      // Check if user is admin or platform admin
       const role = await storage.getUserProjectRole(userId, projectId);
-      if (role !== 'admin') {
+      if (role !== 'admin' && !user?.isPlatformAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -239,10 +240,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = parseInt(req.params.id);
       const memberId = parseInt(req.params.memberId);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
-      // Check if user is admin
+      // Check if user is admin or platform admin
       const role = await storage.getUserProjectRole(userId, projectId);
-      if (role !== 'admin') {
+      if (role !== 'admin' && !user?.isPlatformAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -265,10 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectId = parseInt(req.params.id);
       const memberId = parseInt(req.params.memberId);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
-      // Check if user is admin
+      // Check if user is admin or platform admin
       const role = await storage.getUserProjectRole(userId, projectId);
-      if (role !== 'admin') {
+      if (role !== 'admin' && !user?.isPlatformAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
       

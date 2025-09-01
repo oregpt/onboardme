@@ -136,8 +136,10 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.refetchQueries({ queryKey: ["/api/projects"] });
       setShowDeleteProject(null);
       setDeleteConfirmationName("");
+      setExpandedProject(null); // Close any expanded project
       toast({
         title: "Project Deleted",
         description: "Project has been permanently deleted.",
