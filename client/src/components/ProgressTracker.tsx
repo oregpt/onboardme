@@ -9,9 +9,10 @@ interface ProgressTrackerProps {
   steps: Record<number, Step[]>;
   userProgress?: UserProgress | null;
   onStepComplete: (stepId: number) => void;
+  onFlowBoxComplete: (flowBoxId: number) => void;
 }
 
-export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete }: ProgressTrackerProps) {
+export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete, onFlowBoxComplete }: ProgressTrackerProps) {
   const totalSteps = Object.values(steps).flat().length;
   const completedSteps = (userProgress?.completedSteps as number[])?.length || 0;
   const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
@@ -51,11 +52,17 @@ export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete
             return (
               <div key={flowBox.id} className="border rounded-lg p-3" data-testid={`flowbox-progress-${flowBox.id}`}>
                 <div className="flex items-center space-x-2 mb-2">
-                  {isFlowBoxCompleted ? (
-                    <CheckCircle className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground" />
-                  )}
+                  <button
+                    onClick={() => onFlowBoxComplete(flowBox.id)}
+                    className="flex-shrink-0 transition-colors duration-200"
+                    data-testid={`button-progress-flowbox-${flowBox.id}`}
+                  >
+                    {isFlowBoxCompleted ? (
+                      <CheckCircle className="h-5 w-5 text-primary hover:text-primary/80" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                    )}
+                  </button>
                   <h4 className="font-medium text-sm">{flowBox.title}</h4>
                   <Badge variant="outline" className="text-xs">
                     {completedBoxSteps}/{boxSteps.length}

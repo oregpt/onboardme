@@ -511,6 +511,7 @@ export default function GuideViewer() {
                 steps={groupedSteps}
                 userProgress={userProgress}
                 onStepComplete={handleStepToggle}
+                onFlowBoxComplete={handleFlowToggle}
               />
             )}
 
