@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide, FlowBox, Step, UserProgress } from "@shared/schema";
-import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download } from "lucide-react";
+import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download, Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 
@@ -368,9 +368,10 @@ export default function GuideViewer() {
                                     setCurrentChatFlowBox(flowBox);
                                     setIsChatOpen(true);
                                   }}
-                                  className="h-6 px-2 text-xs"
+                                  className="h-7 px-3 text-xs flex items-center gap-1.5 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 text-blue-700 hover:from-blue-100 hover:to-purple-100 hover:border-blue-300 transition-all duration-200"
                                   data-testid={`button-ask-ai-${step.id}`}
                                 >
+                                  <Brain className="w-3 h-3" />
                                   Ask AI
                                 </Button>
                               </div>
