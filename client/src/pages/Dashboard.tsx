@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sidebar } from "@/components/Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,14 +15,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useProjectContext } from "@/components/AppLayout";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedProjectId } = useProjectContext();
 
-  const { data: guides, isLoading } = useQuery<Guide[]>({
+  const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
+
+  // Filter guides by selected project
+  const guides = useMemo(() => {
+    if (!allGuides) return [];
+    if (!selectedProjectId) return allGuides;
+    return allGuides.filter(guide => guide.projectId === selectedProjectId);
+  }, [allGuides, selectedProjectId]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -52,10 +60,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
@@ -222,7 +227,6 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 }

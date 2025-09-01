@@ -6,7 +6,6 @@ import {
   BookOpen, 
   LayoutDashboard, 
   Book, 
-  GitBranch, 
   Users, 
   Database,
   LogOut,
@@ -42,20 +41,18 @@ export function Sidebar() {
     }
 
     if (userRole === 'creator') {
-      // Creators can see dashboard, guides, and flow editor
+      // Creators can see dashboard and guides
       return [
         { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-        ...baseItems,
-        { href: "/editor", icon: GitBranch, label: "Flow Editor" }
+        ...baseItems
       ];
     }
 
     if (userRole === 'admin') {
-      // Admins can see everything
+      // Admins can see everything except flow editor
       return [
         { href: "/", icon: LayoutDashboard, label: "Dashboard" },
         ...baseItems,
-        { href: "/editor", icon: GitBranch, label: "Flow Editor" },
         { href: "/users", icon: Users, label: "User Progress" },
         { href: "/admin/1", icon: Settings, label: "Admin" }
       ];
@@ -84,7 +81,6 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const isActive = location === item.href || 
-                         (item.href === "/editor" && location.startsWith("/editor")) ||
                          (item.href === "/admin/1" && location.startsWith("/admin"));
           
           return (

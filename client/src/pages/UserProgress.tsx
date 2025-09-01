@@ -1,18 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sidebar } from "@/components/Sidebar";
 import { Progress } from "@/components/ui/progress";
 import type { Guide } from "@shared/schema";
 import { Users, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useProjectContext } from "@/components/AppLayout";
+import { useMemo } from "react";
 
 export default function UserProgress() {
-  const { data: guides, isLoading } = useQuery<Guide[]>({
+  const { selectedProjectId } = useProjectContext();
+  
+  const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
 
+  // Filter guides by selected project
+  const guides = useMemo(() => {
+    if (!allGuides) return [];
+    if (!selectedProjectId) return allGuides;
+    return allGuides.filter(guide => guide.projectId === selectedProjectId);
+  }, [allGuides, selectedProjectId]);
+
   // Mock user progress data - would come from backend in real implementation
+  // In real implementation, this would also be filtered by project
   const userProgressData = [
     {
       userId: "user1",
@@ -25,10 +36,7 @@ export default function UserProgress() {
   ];
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
@@ -147,7 +155,6 @@ export default function UserProgress() {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 }

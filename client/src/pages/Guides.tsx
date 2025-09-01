@@ -2,21 +2,28 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sidebar } from "@/components/Sidebar";
 import type { Guide } from "@shared/schema";
 import { Plus, Edit, Eye, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useProjectContext } from "@/components/AppLayout";
+import { useMemo } from "react";
 
 export default function Guides() {
-  const { data: guides, isLoading } = useQuery<Guide[]>({
+  const { selectedProjectId } = useProjectContext();
+  
+  const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
 
+  // Filter guides by selected project
+  const guides = useMemo(() => {
+    if (!allGuides) return [];
+    if (!selectedProjectId) return allGuides; // Show all if no project selected
+    return allGuides.filter(guide => guide.projectId === selectedProjectId);
+  }, [allGuides, selectedProjectId]);
+
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
@@ -97,7 +104,6 @@ export default function Guides() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

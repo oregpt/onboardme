@@ -1,30 +1,38 @@
-import { ReactNode } from "react";
-import { useLocation } from "wouter";
-import { ProjectSidebar } from "./ProjectSidebar";
+import { ReactNode, createContext, useContext, useState } from "react";
+import { Sidebar } from "./Sidebar";
+import { ProjectSelector } from "./ProjectSelector";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
+// Project context for filtering
+interface ProjectContextType {
+  selectedProjectId: number | null;
+  setSelectedProjectId: (id: number | null) => void;
+}
+
+const ProjectContext = createContext<ProjectContextType>({
+  selectedProjectId: null,
+  setSelectedProjectId: () => {},
+});
+
+export const useProjectContext = () => useContext(ProjectContext);
+
 export function AppLayout({ children }: AppLayoutProps) {
-  const [location] = useLocation();
-  
-  // Extract project ID from URL if we're on a project page
-  const projectMatch = location.match(/^\/project\/(\d+)/);
-  const currentProjectId = projectMatch ? parseInt(projectMatch[1]) : undefined;
-
-  // Also check admin routes
-  const adminMatch = location.match(/^\/admin\/(\d+)/);
-  const adminProjectId = adminMatch ? parseInt(adminMatch[1]) : undefined;
-
-  const activeProjectId = currentProjectId || adminProjectId;
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   return (
-    <div className="h-screen flex bg-background">
-      <ProjectSidebar currentProjectId={activeProjectId} />
-      <main className="flex-1 overflow-hidden">
-        {children}
-      </main>
-    </div>
+    <ProjectContext.Provider value={{ selectedProjectId, setSelectedProjectId }}>
+      <div className="h-screen flex bg-background">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ProjectSelector />
+          <main className="flex-1 overflow-hidden">
+            {children}
+          </main>
+        </div>
+      </div>
+    </ProjectContext.Provider>
   );
 }
