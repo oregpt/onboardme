@@ -193,12 +193,6 @@ export default function StepComments({ stepId }: StepCommentsProps) {
                       </span>
                     </div>
                     
-                    {comment.isCertified && (
-                      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Certified Helpful
-                      </Badge>
-                    )}
                   </div>
                   
                   {/* Comment Content */}
