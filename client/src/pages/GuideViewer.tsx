@@ -323,20 +323,78 @@ export default function GuideViewer() {
                                 )}
                                 
                                 {step.attachments && (step.attachments as any[]).length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {(step.attachments as any[]).map((attachment, idx) => (
-                                      <Button
-                                        key={idx}
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => downloadAttachment(attachment)}
-                                        className="h-6 px-2 text-xs flex items-center gap-1"
-                                        data-testid={`button-download-attachment-${idx}`}
-                                      >
-                                        <Download className="w-3 h-3" />
-                                        {attachment.name || attachment.type}
-                                      </Button>
-                                    ))}
+                                  <div className="mt-3 space-y-3">
+                                    {/* FAQ Attachments */}
+                                    {(step.attachments as any[]).filter(att => att.category === 'faq').length > 0 && (
+                                      <div>
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                                          📋 FAQ Files
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                          {(step.attachments as any[]).filter(att => att.category === 'faq').map((attachment, idx) => (
+                                            <Button
+                                              key={`faq-${idx}`}
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => downloadAttachment(attachment)}
+                                              className="h-6 px-2 text-xs flex items-center gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                                              data-testid={`button-download-faq-${idx}`}
+                                            >
+                                              <Download className="w-3 h-3" />
+                                              {attachment.name || attachment.type}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Other Help Attachments */}
+                                    {(step.attachments as any[]).filter(att => att.category === 'other-help').length > 0 && (
+                                      <div>
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                                          🛠️ Other Help Files
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                          {(step.attachments as any[]).filter(att => att.category === 'other-help').map((attachment, idx) => (
+                                            <Button
+                                              key={`other-help-${idx}`}
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => downloadAttachment(attachment)}
+                                              className="h-6 px-2 text-xs flex items-center gap-1 border-green-200 text-green-700 hover:bg-green-50"
+                                              data-testid={`button-download-other-help-${idx}`}
+                                            >
+                                              <Download className="w-3 h-3" />
+                                              {attachment.name || attachment.type}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    {/* Legacy Attachments (no category) */}
+                                    {(step.attachments as any[]).filter(att => !att.category).length > 0 && (
+                                      <div>
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                                          📎 Files
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                          {(step.attachments as any[]).filter(att => !att.category).map((attachment, idx) => (
+                                            <Button
+                                              key={`legacy-${idx}`}
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => downloadAttachment(attachment)}
+                                              className="h-6 px-2 text-xs flex items-center gap-1"
+                                              data-testid={`button-download-attachment-${idx}`}
+                                            >
+                                              <Download className="w-3 h-3" />
+                                              {attachment.name || attachment.type}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                               </div>

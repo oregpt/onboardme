@@ -353,11 +353,25 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                           {step.content}
                         </p>
                       )}
-                      <div className="mt-2 flex items-center space-x-2">
+                      <div className="mt-2 flex items-center space-x-2 flex-wrap gap-1">
                         {step.attachments && (step.attachments as any[]).length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {(step.attachments as any[]).length} attachments
-                          </Badge>
+                          <>
+                            {(step.attachments as any[]).filter(att => att.category === 'faq').length > 0 && (
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                                📋 {(step.attachments as any[]).filter(att => att.category === 'faq').length} FAQ
+                              </Badge>
+                            )}
+                            {(step.attachments as any[]).filter(att => att.category === 'other-help').length > 0 && (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                🛠️ {(step.attachments as any[]).filter(att => att.category === 'other-help').length} Help
+                              </Badge>
+                            )}
+                            {(step.attachments as any[]).filter(att => !att.category).length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                📎 {(step.attachments as any[]).filter(att => !att.category).length} Files
+                              </Badge>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

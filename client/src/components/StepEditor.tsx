@@ -71,7 +71,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
   };
 
   // Attachment handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, category: 'faq' | 'other-help') => {
     const files = e.target.files;
     if (!files) return;
 
@@ -84,6 +84,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
           type: file.type,
           size: file.size,
           data: event.target?.result as string, // Base64 data
+          category, // Add category field
         };
         
         setStepData(prev => ({
@@ -302,53 +303,56 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
             </CardContent>
           </Card>
 
-          {/* Attachments */}
+          {/* FAQ Attachments */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Attachments</CardTitle>
+              <CardTitle className="text-sm flex items-center">
+                <span className="mr-2">📋</span>
+                FAQ Files
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {/* Upload Button */}
+              {/* FAQ Upload Button */}
               <div className="flex items-center space-x-2">
                 <input
                   type="file"
-                  id="file-upload"
+                  id="faq-upload"
                   multiple
-                  onChange={handleFileSelect}
+                  onChange={(e) => handleFileSelect(e, 'faq')}
                   className="hidden"
                   accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif"
                 />
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => document.getElementById('file-upload')?.click()}
-                  data-testid="button-upload-attachment"
+                  onClick={() => document.getElementById('faq-upload')?.click()}
+                  data-testid="button-upload-faq"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Files
+                  Upload FAQ Files
                 </Button>
                 <span className="text-xs text-muted-foreground">
                   PDF, DOC, TXT, Images
                 </span>
               </div>
 
-              {/* Attachment List */}
-              {stepData.attachments.length > 0 && (
+              {/* FAQ Attachment List */}
+              {stepData.attachments.filter((att: any) => att.category === 'faq').length > 0 && (
                 <div className="space-y-2">
-                  {stepData.attachments.map((attachment: any) => (
+                  {stepData.attachments.filter((att: any) => att.category === 'faq').map((attachment: any) => (
                     <div
                       key={attachment.id}
-                      className="flex items-center justify-between p-2 border border-border rounded-md bg-accent/50"
-                      data-testid={`attachment-${attachment.id}`}
+                      className="flex items-center justify-between p-2 border border-border rounded-md bg-blue-50 dark:bg-blue-950/30"
+                      data-testid={`faq-attachment-${attachment.id}`}
                     >
                       <div className="flex items-center space-x-2 flex-1 min-w-0">
-                        <Paperclip className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <Paperclip className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-foreground truncate">
                             {attachment.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {formatFileSize(attachment.size)}
+                            {formatFileSize(attachment.size)} • FAQ
                           </p>
                         </div>
                       </div>
@@ -357,7 +361,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
                         size="sm"
                         onClick={() => removeAttachment(attachment.id)}
                         className="text-destructive hover:text-destructive"
-                        data-testid={`button-remove-attachment-${attachment.id}`}
+                        data-testid={`button-remove-faq-${attachment.id}`}
                       >
                         <X className="w-4 h-4" />
                       </Button>
@@ -366,9 +370,84 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
                 </div>
               )}
 
-              {stepData.attachments.length === 0 && (
+              {stepData.attachments.filter((att: any) => att.category === 'faq').length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  No attachments added yet. Upload files to provide additional resources for this step.
+                  No FAQ files added yet. Upload files with frequently asked questions.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Other Help Attachments */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center">
+                <span className="mr-2">🛠️</span>
+                Other Help Files
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Other Help Upload Button */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="file"
+                  id="other-help-upload"
+                  multiple
+                  onChange={(e) => handleFileSelect(e, 'other-help')}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('other-help-upload')?.click()}
+                  data-testid="button-upload-other-help"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Help Files
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  PDF, DOC, TXT, Images
+                </span>
+              </div>
+
+              {/* Other Help Attachment List */}
+              {stepData.attachments.filter((att: any) => att.category === 'other-help').length > 0 && (
+                <div className="space-y-2">
+                  {stepData.attachments.filter((att: any) => att.category === 'other-help').map((attachment: any) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-2 border border-border rounded-md bg-green-50 dark:bg-green-950/30"
+                      data-testid={`other-help-attachment-${attachment.id}`}
+                    >
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <Paperclip className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {attachment.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.size)} • Other Help
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-remove-other-help-${attachment.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {stepData.attachments.filter((att: any) => att.category === 'other-help').length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No other help files added yet. Upload additional support materials.
                 </p>
               )}
             </CardContent>
