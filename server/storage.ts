@@ -45,6 +45,7 @@ export interface IStorage {
   // Project operations
   createProject(project: InsertProject): Promise<Project>;
   getProjects(userId: string): Promise<Project[]>;
+  getAllProjects(): Promise<Project[]>; // For platform admins
   getProject(id: number): Promise<Project | undefined>;
   getProjectBySlug(slug: string): Promise<Project | undefined>;
   updateProject(id: number, updates: Partial<InsertProject>): Promise<Project | undefined>;
@@ -120,6 +121,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    // Set platform admin for ore.phillips@icloud.com
+    if (userData.email === 'ore.phillips@icloud.com') {
+      userData.isPlatformAdmin = true;
+    }
+
     const [user] = await db
       .insert(users)
       .values(userData)
@@ -131,6 +137,20 @@ export class DatabaseStorage implements IStorage {
         },
       })
       .returning();
+
+    // Auto-add new users to project 1 as user role
+    if (user && userData.id) {
+      try {
+        // Check if user is already a member of project 1
+        const existingMembership = await this.getUserProjectRole(userData.id, 1);
+        if (!existingMembership) {
+          await this.addProjectMember(1, userData.id, 'user');
+        }
+      } catch (error) {
+        console.log('Note: Could not auto-add user to project 1 (project may not exist yet)');
+      }
+    }
+
     return user;
   }
 
@@ -141,6 +161,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProjects(userId: string): Promise<Project[]> {
+    // Check if user is platform admin
+    const user = await this.getUser(userId);
+    if (user?.isPlatformAdmin) {
+      return await this.getAllProjects();
+    }
+
     return await db
       .select({
         id: projects.id,
@@ -156,6 +182,14 @@ export class DatabaseStorage implements IStorage {
       .from(projects)
       .innerJoin(projectMembers, eq(projects.id, projectMembers.projectId))
       .where(and(eq(projectMembers.userId, userId), eq(projects.isActive, true)))
+      .orderBy(desc(projects.createdAt));
+  }
+
+  async getAllProjects(): Promise<Project[]> {
+    return await db
+      .select()
+      .from(projects)
+      .where(eq(projects.isActive, true))
       .orderBy(desc(projects.createdAt));
   }
 

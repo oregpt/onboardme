@@ -26,8 +26,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/projects', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const projects = await storage.getProjects(userId);
-      res.json(projects);
+      const user = await storage.getUser(userId);
+      
+      let projects;
+      if (user?.isPlatformAdmin) {
+        // Platform admins see all projects
+        projects = await storage.getAllProjects();
+        // Add role info for platform admins (they have admin access to all)
+        const projectsWithRoles = projects.map(project => ({
+          ...project,
+          userRole: 'admin'
+        }));
+        res.json(projectsWithRoles);
+      } else {
+        // Regular users see only their projects
+        projects = await storage.getProjects(userId);
+        // Add role info for each project
+        const projectsWithRoles = await Promise.all(
+          projects.map(async (project) => {
+            const role = await storage.getUserProjectRole(userId, project.id);
+            return { ...project, userRole: role || 'user' };
+          })
+        );
+        res.json(projectsWithRoles);
+      }
     } catch (error) {
       console.error("Error fetching projects:", error);
       res.status(500).json({ message: "Failed to fetch projects" });
@@ -38,9 +60,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const projectId = parseInt(req.params.id);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
       // Check if user has access to this project
-      const role = await storage.getUserProjectRole(userId, projectId);
+      let role = await storage.getUserProjectRole(userId, projectId);
+      
+      // Platform admins have admin access to all projects
+      if (user?.isPlatformAdmin) {
+        role = 'admin';
+      }
+      
       if (!role) {
         return res.status(403).json({ message: "Access denied" });
       }
@@ -61,10 +90,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const projectId = parseInt(req.params.id);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
-      // Check if user is admin
+      // Check if user is admin or platform admin
       const role = await storage.getUserProjectRole(userId, projectId);
-      if (role !== 'admin') {
+      if (role !== 'admin' && !user?.isPlatformAdmin) {
         return res.status(403).json({ message: "Admin access required" });
       }
       
@@ -111,9 +141,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const projectId = parseInt(req.params.id);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
       // Check if user has access to this project
-      const role = await storage.getUserProjectRole(userId, projectId);
+      let role = await storage.getUserProjectRole(userId, projectId);
+      if (user?.isPlatformAdmin) {
+        role = 'admin';
+      }
+      
       if (!role) {
         return res.status(403).json({ message: "Access denied" });
       }
