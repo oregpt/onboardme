@@ -216,7 +216,7 @@ export default function GuideViewer() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -262,7 +262,8 @@ export default function GuideViewer() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
@@ -550,6 +551,7 @@ export default function GuideViewer() {
               </CardContent>
             </Card>
           </div>
+        </div>
         </div>
       </div>
 

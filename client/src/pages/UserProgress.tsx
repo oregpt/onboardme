@@ -22,18 +22,8 @@ export default function UserProgress() {
     return allGuides.filter(guide => guide.projectId === selectedProjectId);
   }, [allGuides, selectedProjectId]);
 
-  // Mock user progress data - would come from backend in real implementation
-  // In real implementation, this would also be filtered by project
-  const userProgressData = [
-    {
-      userId: "user1",
-      userName: "John Doe",
-      email: "john@example.com",
-      guides: [
-        { guideId: 1, guideName: "ATXP Agent Onboarding", progress: 75, completedSteps: 6, totalSteps: 8, lastActive: "2025-01-01" }
-      ]
-    }
-  ];
+  // For now, no mock data - this would come from backend in real implementation
+  const userProgressData: any[] = [];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
