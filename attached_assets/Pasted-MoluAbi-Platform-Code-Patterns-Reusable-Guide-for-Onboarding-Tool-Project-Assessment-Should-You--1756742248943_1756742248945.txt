@@ -1,0 +1,845 @@
+MoluAbi Platform Code Patterns - Reusable Guide for Onboarding Tool
+Project Assessment: Should You Build Separately?
+Recommendation: BUILD AS SEPARATE PROJECT
+
+Your Custom Onboarding Guide Tool requires:
+
+Visual drag-and-drop flow editor (complex UI library)
+Hierarchical step/flow structure
+Persona-based content variations
+Progress tracking system
+Simple open-access model
+MoluAbi is enterprise B2B with complex multi-tenancy, which would add unnecessary complexity to your onboarding tool.
+
+🚀 Full-Stack Setup (Copy This Entire Structure)
+package.json Dependencies
+{
+  "name": "onboarding-guide-tool",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development tsx server/index.ts",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "start": "NODE_ENV=production node dist/index.js",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "@hookform/resolvers": "^3.10.0",
+    "@neondatabase/serverless": "^0.10.4",
+    "@radix-ui/react-checkbox": "^1.1.5",
+    "@radix-ui/react-dialog": "^1.1.7",
+    "@radix-ui/react-dropdown-menu": "^2.1.7",
+    "@radix-ui/react-label": "^2.1.3",
+    "@radix-ui/react-progress": "^1.1.3",
+    "@radix-ui/react-select": "^2.1.7",
+    "@radix-ui/react-separator": "^1.1.3",
+    "@radix-ui/react-slider": "^1.2.4",
+    "@radix-ui/react-slot": "^1.2.0",
+    "@radix-ui/react-tabs": "^1.1.4",
+    "@radix-ui/react-toast": "^1.2.7",
+    "@radix-ui/react-tooltip": "^1.2.0",
+    "@tanstack/react-query": "^5.60.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "connect-pg-simple": "^10.0.0",
+    "drizzle-orm": "^0.39.1",
+    "drizzle-zod": "^0.7.0",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "framer-motion": "^11.13.1",
+    "lucide-react": "^0.453.0",
+    "multer": "^2.0.1",
+    "openai": "^5.12.1",
+    "openid-client": "^6.6.2",
+    "passport": "^0.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^14.3.8",
+    "react-hook-form": "^7.55.0",
+    "react-markdown": "^10.1.0",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "wouter": "^3.3.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@replit/vite-plugin-cartographer": "^0.2.7",
+    "@tailwindcss/typography": "^0.5.15",
+    "@types/express": "4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/multer": "^2.0.0",
+    "@types/node": "20.16.11",
+    "@types/passport": "^1.0.16",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.30.4",
+    "esbuild": "^0.25.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.1",
+    "typescript": "5.6.3",
+    "vite": "^5.4.19"
+  }
+}
+Project Structure
+/
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ui/         # Shadcn/UI components
+│   │   │   ├── FlowEditor.tsx
+│   │   │   └── ProgressTracker.tsx
+│   │   ├── hooks/
+│   │   │   └── useAuth.ts
+│   │   ├── lib/
+│   │   │   └── queryClient.ts
+│   │   ├── pages/
+│   │   └── App.tsx
+├── server/
+│   ├── services/
+│   ├── routes.ts
+│   ├── storage.ts
+│   ├── index.ts
+│   └── db.ts
+├── shared/
+│   └── schema.ts
+└── package.json
+🗄️ Database Schema (shared/schema.ts)
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  jsonb,
+  index,
+  serial,
+  integer,
+  boolean,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+import { relations, sql } from "drizzle-orm";
+// Session storage for auth
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+// Users table for Replit Auth
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email"),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+// Onboarding Guides
+export const guides = pgTable("guides", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  globalInformation: text("global_information"), // Guide-wide content
+  personas: jsonb("personas").default(sql`'[]'::jsonb`), // Array of persona definitions
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+// Flow boxes (containers for steps)
+export const flowBoxes = pgTable("flow_boxes", {
+  id: serial("id").primaryKey(),
+  guideId: integer("guide_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  position: integer("position").notNull(), // Order in the flow
+  isVisible: boolean("is_visible").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+// Individual steps within flow boxes
+export const steps = pgTable("steps", {
+  id: serial("id").primaryKey(),
+  flowBoxId: integer("flow_box_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content"), // Base content (markdown)
+  personaVariations: jsonb("persona_variations").default(sql`'{}'::jsonb`), // Persona-specific content
+  position: integer("position").notNull(), // Order within flow box
+  isVisible: boolean("is_visible").default(true),
+  attachments: jsonb("attachments").default(sql`'[]'::jsonb`), // File attachments
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+// User progress tracking
+export const userProgress = pgTable("user_progress", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  guideId: integer("guide_id").notNull(),
+  completedSteps: jsonb("completed_steps").default(sql`'[]'::jsonb`), // Array of step IDs
+  completedFlowBoxes: jsonb("completed_flow_boxes").default(sql`'[]'::jsonb`), // Array of flow box IDs
+  currentStep: integer("current_step"),
+  selectedPersona: varchar("selected_persona"),
+  startedAt: timestamp("started_at").defaultNow(),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
+});
+// AI Q&A conversations
+export const qaConversations = pgTable("qa_conversations", {
+  id: serial("id").primaryKey(),
+  guideId: integer("guide_id").notNull(),
+  stepId: integer("step_id"), // Null for guide-level questions
+  userId: varchar("user_id").notNull(),
+  question: text("question").notNull(),
+  aiResponse: text("ai_response").notNull(),
+  userFeedback: integer("user_feedback"), // 1 for thumbs up, -1 for thumbs down
+  isValidatedSolution: boolean("is_validated_solution").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+// Knowledge base entries (for AI context)
+export const knowledgeBase = pgTable("knowledge_base", {
+  id: serial("id").primaryKey(),
+  guideId: integer("guide_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  tags: text("tags").array().default(sql`'{}'::text[]`),
+  source: varchar("source").default("manual"), // 'manual', 'ai_synthesis', 'qa_validated'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+// Relations
+export const guidesRelations = relations(guides, ({ many }) => ({
+  flowBoxes: many(flowBoxes),
+  userProgress: many(userProgress),
+  qaConversations: many(qaConversations),
+  knowledgeBase: many(knowledgeBase),
+}));
+export const flowBoxesRelations = relations(flowBoxes, ({ one, many }) => ({
+  guide: one(guides, {
+    fields: [flowBoxes.guideId],
+    references: [guides.id],
+  }),
+  steps: many(steps),
+}));
+export const stepsRelations = relations(steps, ({ one, many }) => ({
+  flowBox: one(flowBoxes, {
+    fields: [steps.flowBoxId],
+    references: [flowBoxes.id],
+  }),
+  qaConversations: many(qaConversations),
+}));
+// Types
+export type Guide = typeof guides.$inferSelect;
+export type InsertGuide = typeof guides.$inferInsert;
+export type FlowBox = typeof flowBoxes.$inferSelect;
+export type InsertFlowBox = typeof flowBoxes.$inferInsert;
+export type Step = typeof steps.$inferSelect;
+export type InsertStep = typeof steps.$inferInsert;
+export type UserProgress = typeof userProgress.$inferSelect;
+export type InsertUserProgress = typeof userProgress.$inferInsert;
+export type QAConversation = typeof qaConversations.$inferSelect;
+export type InsertQAConversation = typeof qaConversations.$inferInsert;
+// Validation schemas
+export const insertGuideSchema = createInsertSchema(guides);
+export const insertFlowBoxSchema = createInsertSchema(flowBoxes);
+export const insertStepSchema = createInsertSchema(steps);
+export const insertUserProgressSchema = createInsertSchema(userProgress);
+🔐 Authentication Setup (Replit Auth)
+server/replitAuth.ts (Copy Entire File)
+import * as client from "openid-client";
+import { Strategy, type VerifyFunction } from "openid-client/passport";
+import passport from "passport";
+import session from "express-session";
+import type { Express, RequestHandler } from "express";
+import memoize from "memoizee";
+import connectPg from "connect-pg-simple";
+import { storage } from "./storage";
+if (!process.env.REPLIT_DOMAINS) {
+  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+}
+const getOidcConfig = memoize(
+  async () => {
+    return await client.discovery(
+      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+      process.env.REPL_ID!
+    );
+  },
+  { maxAge: 3600 * 1000 }
+);
+export function getSession() {
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const pgStore = connectPg(session);
+  const sessionStore = new pgStore({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: false,
+    ttl: sessionTtl,
+    tableName: "sessions",
+  });
+  return session({
+    secret: process.env.SESSION_SECRET!,
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: true,
+      maxAge: sessionTtl,
+    },
+  });
+}
+export async function setupAuth(app: Express) {
+  app.set("trust proxy", 1);
+  app.use(getSession());
+  app.use(passport.initialize());
+  app.use(passport.session());
+  const config = await getOidcConfig();
+  const verify: VerifyFunction = async (
+    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+    verified: passport.AuthenticateCallback
+  ) => {
+    const user = {};
+    user.claims = tokens.claims();
+    await storage.upsertUser({
+      id: tokens.claims()["sub"],
+      email: tokens.claims()["email"],
+      firstName: tokens.claims()["first_name"],
+      lastName: tokens.claims()["last_name"],
+      profileImageUrl: tokens.claims()["profile_image_url"],
+    });
+    verified(null, user);
+  };
+  for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
+    const strategy = new Strategy(
+      {
+        name: `replitauth:${domain}`,
+        config,
+        scope: "openid email profile offline_access",
+        callbackURL: `https://${domain}/api/callback`,
+      },
+      verify,
+    );
+    passport.use(strategy);
+  }
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+  app.get("/api/login", (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      prompt: "login consent",
+      scope: ["openid", "email", "profile", "offline_access"],
+    })(req, res, next);
+  });
+  app.get("/api/callback", (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      successReturnToOrRedirect: "/",
+      failureRedirect: "/api/login",
+    })(req, res, next);
+  });
+  app.get("/api/logout", (req, res) => {
+    req.logout(() => {
+      res.redirect("/");
+    });
+  });
+}
+export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  next();
+};
+🗄️ Storage Interface Pattern
+server/storage.ts
+import { guides, flowBoxes, steps, userProgress, qaConversations, knowledgeBase, users } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
+export interface IStorage {
+  // User operations
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Guide operations
+  createGuide(guide: InsertGuide): Promise<Guide>;
+  getGuides(): Promise<Guide[]>;
+  getGuide(id: number): Promise<Guide | undefined>;
+  getGuideBySlug(slug: string): Promise<Guide | undefined>;
+  updateGuide(id: number, updates: Partial<InsertGuide>): Promise<Guide | undefined>;
+  deleteGuide(id: number): Promise<boolean>;
+  
+  // Flow operations
+  createFlowBox(flowBox: InsertFlowBox): Promise<FlowBox>;
+  getFlowBoxesByGuide(guideId: number): Promise<FlowBox[]>;
+  updateFlowBox(id: number, updates: Partial<InsertFlowBox>): Promise<FlowBox | undefined>;
+  deleteFlowBox(id: number): Promise<boolean>;
+  
+  // Step operations
+  createStep(step: InsertStep): Promise<Step>;
+  getStepsByFlowBox(flowBoxId: number): Promise<Step[]>;
+  getStepsByGuide(guideId: number): Promise<Step[]>;
+  updateStep(id: number, updates: Partial<InsertStep>): Promise<Step | undefined>;
+  deleteStep(id: number): Promise<boolean>;
+  
+  // Progress operations
+  getUserProgress(userId: string, guideId: number): Promise<UserProgress | undefined>;
+  updateUserProgress(userId: string, guideId: number, updates: Partial<InsertUserProgress>): Promise<UserProgress>;
+  markStepComplete(userId: string, guideId: number, stepId: number): Promise<void>;
+  markFlowBoxComplete(userId: string, guideId: number, flowBoxId: number): Promise<void>;
+  
+  // Q&A operations
+  createQAConversation(qa: InsertQAConversation): Promise<QAConversation>;
+  getQAByGuide(guideId: number): Promise<QAConversation[]>;
+  getQAByStep(stepId: number): Promise<QAConversation[]>;
+  updateQAFeedback(id: number, feedback: number): Promise<void>;
+  
+  // Knowledge base operations
+  createKnowledgeEntry(entry: InsertKnowledgeBase): Promise<KnowledgeBase>;
+  getKnowledgeByGuide(guideId: number): Promise<KnowledgeBase[]>;
+}
+export class DatabaseStorage implements IStorage {
+  // Implementation would go here...
+  // Follow the same pattern as MoluAbi's DatabaseStorage class
+}
+export const storage = new DatabaseStorage();
+🎯 Frontend Patterns
+React Query Setup (client/src/lib/queryClient.ts)
+import { QueryClient } from "@tanstack/react-query";
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: async ({ queryKey }) => {
+        const res = await fetch(queryKey[0] as string);
+        if (!res.ok) {
+          if (res.status >= 500) {
+            throw new Error(`A server error occurred: ${res.statusText}`);
+          }
+          if (res.status === 401) {
+            throw new Error(`401: Unauthorized - ${res.statusText}`);
+          }
+          if (res.status >= 400) {
+            throw new Error(`Client error: ${res.statusText}`);
+          }
+          throw new Error(`Network error: ${res.statusText}`);
+        }
+        return res.json();
+      },
+    },
+  },
+});
+export async function apiRequest(url: string, options?: RequestInit) {
+  const response = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    },
+    ...options,
+  });
+  if (!response.ok) {
+    if (response.status >= 500) {
+      throw new Error(`A server error occurred: ${response.statusText}`);
+    }
+    if (response.status === 401) {
+      throw new Error(`401: Unauthorized - ${response.statusText}`);
+    }
+    if (response.status >= 400) {
+      throw new Error(`Client error: ${response.statusText}`);
+    }
+    throw new Error(`Network error: ${response.statusText}`);
+  }
+  return response.json();
+}
+Auth Hook (client/src/hooks/useAuth.ts)
+import { useQuery } from "@tanstack/react-query";
+export function useAuth() {
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+  });
+  return {
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+  };
+}
+Main App Component (client/src/App.tsx)
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuth } from "@/hooks/useAuth";
+import GuideEditor from "@/pages/GuideEditor";
+import GuideViewer from "@/pages/GuideViewer";
+import Dashboard from "@/pages/Dashboard";
+import Landing from "@/pages/Landing";
+import NotFound from "@/pages/not-found";
+function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+  return (
+    <Switch>
+      {isLoading ? (
+        <Route>
+          {() => (
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+        </Route>
+      ) : !isAuthenticated ? (
+        <>
+          <Route path="/" component={Landing} />
+          <Route path="/guide/:slug" component={GuideViewer} />
+          <Route component={NotFound} />
+        </>
+      ) : (
+        <>
+          <Route path="/" component={Dashboard} />
+          <Route path="/editor" component={GuideEditor} />
+          <Route path="/guide/:slug" component={GuideViewer} />
+          <Route component={NotFound} />
+        </>
+      )}
+    </Switch>
+  );
+}
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Router />
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+🔌 AI Integration Pattern
+server/services/claude.ts (Simplified for Q&A)
+import Anthropic from "@anthropic-ai/sdk";
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+});
+export class ClaudeService {
+  async generateQAResponse(
+    question: string,
+    context: string,
+    guideTitle: string
+  ): Promise<string> {
+    try {
+      const systemPrompt = `You are a helpful assistant for the "${guideTitle}" onboarding guide. 
+      Answer questions based on the provided context and help users complete their integration steps.
+      
+      Context information:
+      ${context}
+      
+      Always provide practical, actionable answers. If you don't know something, say so.`;
+      const response = await anthropic.messages.create({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: question,
+          },
+        ],
+      });
+      return response.content[0].type === "text" ? response.content[0].text : "";
+    } catch (error) {
+      console.error("Claude API error:", error);
+      throw new Error("Failed to generate AI response");
+    }
+  }
+}
+export const claudeService = new ClaudeService();
+🌐 Server Setup
+server/index.ts
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+      log(logLine);
+    }
+  });
+  next();
+});
+(async () => {
+  const server = await registerRoutes(app);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
+  });
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+  const port = 5000;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
+})();
+server/routes.ts (Basic Structure)
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { claudeService } from "./services/claude";
+import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema } from "@shared/schema";
+import { z } from "zod";
+export async function registerRoutes(app: Express): Promise<Server> {
+  await setupAuth(app);
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+  // Guide management routes
+  app.get('/api/guides', async (req, res) => {
+    try {
+      const guides = await storage.getGuides();
+      res.json(guides);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch guides" });
+    }
+  });
+  app.post('/api/guides', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideData = insertGuideSchema.parse({ ...req.body, createdBy: userId });
+      const guide = await storage.createGuide(guideData);
+      res.json(guide);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create guide" });
+    }
+  });
+  // Progress tracking routes
+  app.get('/api/guides/:guideId/progress', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.guideId);
+      const progress = await storage.getUserProgress(userId, guideId);
+      res.json(progress || { completedSteps: [], completedFlowBoxes: [] });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch progress" });
+    }
+  });
+  // Q&A routes
+  app.post('/api/guides/:guideId/qa', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.guideId);
+      const { question, stepId } = req.body;
+      // Get context for the question
+      const guide = await storage.getGuide(guideId);
+      const knowledgeEntries = await storage.getKnowledgeByGuide(guideId);
+      const context = knowledgeEntries.map(k => k.content).join('\n\n');
+      // Generate AI response
+      const aiResponse = await claudeService.generateQAResponse(
+        question,
+        context,
+        guide?.title || "Guide"
+      );
+      // Save the conversation
+      const qaRecord = await storage.createQAConversation({
+        guideId,
+        stepId: stepId || null,
+        userId,
+        question,
+        aiResponse,
+      });
+      res.json(qaRecord);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to process Q&A" });
+    }
+  });
+  const httpServer = createServer(app);
+  return httpServer;
+}
+🎨 UI Component Patterns
+Flow Editor Component Structure
+// client/src/components/FlowEditor.tsx
+import { useState } from "react";
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, GripVertical, Eye, EyeOff } from "lucide-react";
+interface FlowEditorProps {
+  guideId: number;
+  flowBoxes: FlowBox[];
+  onUpdateFlow: (flowBoxes: FlowBox[]) => void;
+}
+export function FlowEditor({ guideId, flowBoxes, onUpdateFlow }: FlowEditorProps) {
+  const [editingBox, setEditingBox] = useState<number | null>(null);
+  const handleDragEnd = (result: any) => {
+    // Implement drag and drop reordering
+    if (!result.destination) return;
+    
+    const items = Array.from(flowBoxes);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    onUpdateFlow(items);
+  };
+  return (
+    <div className="space-y-4">
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="flowBoxes">
+          {(provided) => (
+            <div {...provided.droppableProps} ref={provided.innerRef}>
+              {flowBoxes.map((box, index) => (
+                <Draggable key={box.id} draggableId={box.id.toString()} index={index}>
+                  {(provided) => (
+                    <Card
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className="mb-4"
+                    >
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div {...provided.dragHandleProps}>
+                            <GripVertical className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <CardTitle>{box.title}</CardTitle>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleBoxVisibility(box.id)}
+                          >
+                            {box.isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {/* Step management would go here */}
+                      </CardContent>
+                    </Card>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+      
+      <Button onClick={() => addNewFlowBox(guideId)} className="w-full">
+        <Plus className="h-4 w-4 mr-2" />
+        Add Flow Box
+      </Button>
+    </div>
+  );
+}
+Progress Tracker Component
+// client/src/components/ProgressTracker.tsx
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle, Circle } from "lucide-react";
+interface ProgressTrackerProps {
+  flowBoxes: FlowBox[];
+  userProgress: UserProgress;
+  onStepComplete: (stepId: number) => void;
+}
+export function ProgressTracker({ flowBoxes, userProgress, onStepComplete }: ProgressTrackerProps) {
+  const totalSteps = flowBoxes.reduce((acc, box) => acc + box.steps.length, 0);
+  const completedSteps = userProgress.completedSteps?.length || 0;
+  const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Progress</h3>
+        <span className="text-sm text-gray-600">
+          {completedSteps}/{totalSteps} steps completed
+        </span>
+      </div>
+      
+      <Progress value={progressPercentage} className="w-full" />
+      
+      <div className="space-y-3">
+        {flowBoxes.map((box) => (
+          <div key={box.id} className="border rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              {userProgress.completedFlowBoxes?.includes(box.id) ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <Circle className="h-5 w-5 text-gray-400" />
+              )}
+              <h4 className="font-medium">{box.title}</h4>
+            </div>
+            
+            {box.steps.map((step) => (
+              <div key={step.id} className="flex items-center space-x-2 ml-7 mb-1">
+                <input
+                  type="checkbox"
+                  checked={userProgress.completedSteps?.includes(step.id) || false}
+                  onChange={() => onStepComplete(step.id)}
+                  className="rounded"
+                />
+                <span className="text-sm">{step.title}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+🛠️ Additional Libraries You'll Need
+For the visual flow editor, consider adding these to your package.json:
+
+{
+  "react-beautiful-dnd": "^13.1.1",  // For drag and drop
+  "react-flow-renderer": "^10.3.17", // For advanced flow charts
+  "@dnd-kit/core": "^6.1.0",        // Alternative drag and drop
+  "react-markdown": "^9.0.1",       // For markdown rendering
+  "react-syntax-highlighter": "^15.5.0" // For code syntax highlighting
+}
+🔄 Key Patterns to Reuse
+React Query for all API calls - Use the same pattern with proper error handling
+Zod validation - Validate all inputs on both frontend and backend
+Shadcn/UI components - Reuse the same component library for consistency
+Express route structure - Follow the same middleware and error handling patterns
+Drizzle ORM - Use the same database patterns with relations
+TypeScript strict typing - Share types between frontend and backend via shared/ folder
+🎯 Focus Areas for Your New Project
+Visual Flow Editor: This is your main differentiator - invest time in a great drag-and-drop experience
+Progress Persistence: Make sure users can resume where they left off
+AI Context Management: Build a good knowledge base system for guide-specific Q&A
+Persona System: Design this carefully as it affects the entire content structure

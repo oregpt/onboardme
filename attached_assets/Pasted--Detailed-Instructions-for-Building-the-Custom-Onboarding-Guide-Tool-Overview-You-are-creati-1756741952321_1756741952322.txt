@@ -1,0 +1,56 @@
+# Detailed Instructions for Building the Custom Onboarding Guide Tool
+
+## Overview
+You are creating a process-flow onboarding guide tool that serves developers integrating with a protocol. This tool should allow admins to create step-by-step guides for different integration scenarios (like integrating MCP servers or agents) and customize these guides for different personas. The tool will incorporate AI-driven Q&A, allow for attaching Markdown files and other resources, and support both step-specific and guide-wide information.
+
+## Core Functionalities
+
+### 1. Step-by-Step Guide Creation
+* **Visual Flow Interface:** Implement a drag-and-drop visual interface where admins can lay out steps in a linear flowchart-like manner. Each step can be a node that contains detailed instructions.
+* **Hierarchical Flow Structure:** Design flow boxes that can contain multiple sub-steps within them. Users can mark completion at either the flow box level (completing all contained steps) or individual step level for granular progress tracking.
+* **Base Content for Steps:** Each step should support adding a base level of content—text instructions, code snippets, or even images. Think of it as similar to adding a README snippet or a visual aid right into the step.
+* **Step Visibility Controls:** Include setup options to temporarily hide specific steps without deleting them, allowing admins to customize which steps are active in the current guide version.
+
+### 2. Progress Tracking System
+* **Dual-Level Completion:** Implement a completion system that tracks both individual step completion and overall flow box completion. Users should see visual indicators of their progress through the entire guide.
+* **Session Persistence:** Save user progress so they can return to incomplete guides and resume where they left off.
+* **Progress Visualization:** Display clear visual indicators showing completed steps, current step, and remaining steps in the flow.
+
+### 3. AI-Powered Q&A Layer
+* **Embedded Chat Support:** Integrate an AI chat feature that appears at each step. If a user encounters issues at step two, they can ask questions right there.
+* **Guide-Specific Knowledge Base:** Ensure the AI pulls from a knowledge base that is specific to each guide, allowing for targeted, contextual responses that grow over time. When new issues are solved, the solutions are stored so future users of that specific guide benefit from previous Q&A.
+* **Conversation Persistence:** Save all AI conversations in the database to enable future knowledge synthesis and improvement of the knowledge base.
+* **User Feedback System:** Implement thumbs up/thumbs down functionality for AI responses. Store both the original question and the AI solution in the database with the user feedback rating. Thumbs up responses should be marked as validated solutions for future reference.
+* **Knowledge Synthesis Pipeline:** Prepare architecture for future AI-powered synthesis functionality that can analyze saved conversations, identify patterns, and automatically generate or suggest knowledge base entries from successful Q&A interactions.
+
+### 4. Persona-Based Variations
+* **Single Guide, Multiple Views:** Rather than duplicating guides, allow the admin to create variations within the same guide. For example, a single integration guide might have a "persona layer" that adjusts the content shown depending on whether the user is an advanced developer, a junior dev, or a non-technical PM.
+
+### 5. Content Attachment and Global Information
+* **Markdown and Resource Attachments:** Admins should be able to attach Markdown files, images, or other documentation to specific steps. This ensures each step can have rich, contextual resources.
+* **Guide-Wide Information:** Additionally, there should be a way to add overarching information that applies to the entire guide, not just individual steps.
+
+## Future-Ready Architecture
+* **Conditional Branching Preparation:** Design the underlying architecture to support conditional branches (if/then scenarios) in future iterations, though this functionality will not be implemented initially.
+* **Open Access Model:** Currently implements a free-for-all access model with no user permissions or restrictions.
+
+## Actionable Steps for Implementation
+
+1. **Set Up the Interface**: Design the admin dashboard to create and manage guides. Include a drag-and-drop visual flow editor for laying out steps in a linear fashion and a content editor for adding text, code snippets, and resources.
+
+2. **Implement Hierarchical Flow Structure**: Create flow boxes that can contain multiple sub-steps, with dual-level completion tracking and progress visualization.
+
+3. **Build Progress Tracking System**: Implement session persistence and visual progress indicators that work at both the step and flow box levels.
+
+4. **Implement Persona Layers**: Create a mechanism to define personas and toggle content variations within the same guide. This way, each user sees tailored instructions without duplicating the whole guide.
+
+5. **Add Resource Attachments**: Allow the admin to upload or link Markdown files, images, or other docs to each step. Also, provide a section for guide-wide notes or introductory information.
+
+6. **Integrate AI Q&A with Feedback System**: Embed a chat interface at each step that connects to an AI-powered FAQ system with guide-specific knowledge bases. Include thumbs up/down buttons for each AI response and store all conversations with feedback ratings in the database for future knowledge synthesis.
+
+7. **Add Step Management Controls**: Include administrative controls to temporarily hide/show steps during setup without permanent deletion.
+
+8. **Build Knowledge Base Foundation**: Design database schema to support conversation storage, user feedback ratings, and future AI synthesis of successful Q&A patterns into reusable knowledge base entries.
+
+## Conclusion
+By following these instructions, you'll end up with a robust, adaptable onboarding guide tool with sophisticated progress tracking, hierarchical organization, and intelligent knowledge accumulation. It will not only walk developers through integrating with your protocol but also provide them with real-time support and continuously evolving, guide-specific documentation that learns from every user interaction. Think of it as building a dynamic, interactive manual that gets smarter with every use—kind of like giving each new user the benefit of everyone else's experience within the context of their specific integration path, while building a foundation for automated knowledge synthesis and improvement.
