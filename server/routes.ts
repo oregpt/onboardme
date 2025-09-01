@@ -137,6 +137,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete project (Platform Admin Only)
+  app.delete('/api/projects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can delete projects
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+      
+      const { confirmationName } = req.body;
+      if (!confirmationName) {
+        return res.status(400).json({ message: "Project name confirmation is required" });
+      }
+      
+      // Get project to verify name
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Verify the confirmation name matches exactly
+      if (confirmationName !== project.name) {
+        return res.status(400).json({ message: "Project name confirmation does not match" });
+      }
+      
+      // Perform the deletion
+      const deleted = await storage.deleteProject(projectId);
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete project" });
+      }
+      
+      res.json({ message: "Project deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
   app.get('/api/projects/:id/members', isAuthenticated, async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.id);

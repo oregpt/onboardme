@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
 
 interface Project {
   id: number;
@@ -44,10 +44,12 @@ export default function Admin() {
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [expandedProject, setExpandedProject] = useState<number | null>(null);
   const [showAddMember, setShowAddMember] = useState<number | null>(null);
+  const [showDeleteProject, setShowDeleteProject] = useState<number | null>(null);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("user");
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
 
   // Fetch all projects for admin view
   const { data: allProjects, isLoading: allProjectsLoading } = useQuery<Project[]>({
@@ -123,6 +125,28 @@ export default function Admin() {
       toast({
         title: "Add Failed",
         description: "Failed to add member. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: async ({ projectId, confirmationName }: { projectId: number; confirmationName: string }) => {
+      return await apiRequest("DELETE", `/api/projects/${projectId}`, { confirmationName });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setShowDeleteProject(null);
+      setDeleteConfirmationName("");
+      toast({
+        title: "Project Deleted",
+        description: "Project has been permanently deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete project. Please try again.",
         variant: "destructive",
       });
     },
@@ -274,6 +298,85 @@ export default function Admin() {
                         <Badge variant={project.userRole === 'admin' ? 'default' : project.userRole === 'creator' ? 'secondary' : 'outline'}>
                           {project.userRole ? project.userRole.charAt(0).toUpperCase() + project.userRole.slice(1) : 'User'}
                         </Badge>
+                        {/* Delete button for platform admins only */}
+                        {user?.isPlatformAdmin && (
+                          <Dialog open={showDeleteProject === project.id} onOpenChange={(open) => setShowDeleteProject(open ? project.id : null)}>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="ml-2"
+                                data-testid={`button-delete-project-${project.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-destructive">
+                                  <AlertTriangle className="w-5 h-5" />
+                                  Delete Project
+                                </DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                                  <p className="text-sm font-medium text-destructive mb-2">
+                                    ⚠️ DANGER: This action cannot be undone!
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    This will permanently delete the project "{project.name}" and all associated:
+                                  </p>
+                                  <ul className="text-sm text-muted-foreground mt-2 ml-4 list-disc">
+                                    <li>Guides and flow boxes</li>
+                                    <li>User progress data</li>
+                                    <li>Project members</li>
+                                    <li>Conversation history</li>
+                                    <li>All related data</li>
+                                  </ul>
+                                </div>
+                                
+                                <div>
+                                  <Label htmlFor="delete-confirmation">Type the project name to confirm:</Label>
+                                  <Input
+                                    id="delete-confirmation"
+                                    value={deleteConfirmationName}
+                                    onChange={(e) => setDeleteConfirmationName(e.target.value)}
+                                    placeholder={project.name}
+                                    className="mt-1"
+                                    data-testid="input-delete-confirmation"
+                                  />
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Type exactly: <span className="font-mono font-medium">{project.name}</span>
+                                  </p>
+                                </div>
+                                
+                                <div className="flex justify-end gap-2 pt-4 border-t">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      setShowDeleteProject(null);
+                                      setDeleteConfirmationName("");
+                                    }}
+                                    data-testid="button-cancel-delete"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    onClick={() => deleteProjectMutation.mutate({ 
+                                      projectId: project.id, 
+                                      confirmationName: deleteConfirmationName 
+                                    })}
+                                    disabled={deleteConfirmationName !== project.name || deleteProjectMutation.isPending}
+                                    data-testid="button-confirm-delete"
+                                  >
+                                    {deleteProjectMutation.isPending ? "Deleting..." : "Delete Project"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
                       </div>
                     </div>
                   </CardHeader>
