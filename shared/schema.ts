@@ -43,6 +43,8 @@ export const guides = pgTable("guides", {
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   globalInformation: text("global_information"), // Guide-wide content
   personas: jsonb("personas").default(sql`'[]'::jsonb`), // Array of persona definitions
+  resourceLinks: jsonb("resource_links").default(sql`'[]'::jsonb`), // Array of resource links
+  resourceAttachments: jsonb("resource_attachments").default(sql`'[]'::jsonb`), // Array of resource attachments
   isActive: boolean("is_active").default(true),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
@@ -56,8 +58,6 @@ export const flowBoxes = pgTable("flow_boxes", {
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   agentInstructions: text("agent_instructions"), // Optional AI instructions for this flow
-  resourceLinks: jsonb("resource_links").default(sql`'[]'::jsonb`), // Array of resource links
-  resourceAttachments: jsonb("resource_attachments").default(sql`'[]'::jsonb`), // Array of resource attachments
   position: integer("position").notNull(), // Order in the flow
   isVisible: boolean("is_visible").default(true),
   createdAt: timestamp("created_at").defaultNow(),

@@ -28,6 +28,8 @@ export default function GuideEditor() {
     slug: "",
     globalInformation: "",
     personas: ["Developer", "Designer", "Product Manager", "Customer Success", "Finance", "CxO", "Consultant", "Other", "General"],
+    resourceLinks: [] as Array<{title: string, url: string}>,
+    resourceAttachments: [] as Array<{name: string, url: string, category: string}>,
     isActive: true,
   });
 
@@ -55,6 +57,8 @@ export default function GuideEditor() {
         slug: guide.slug,
         globalInformation: guide.globalInformation || "",
         personas: (guide.personas as string[]) || ["Developer", "Designer", "Product Manager", "Customer Success", "Finance", "CxO", "Consultant", "Other", "General"],
+        resourceLinks: (guide as any).resourceLinks || [],
+        resourceAttachments: (guide as any).resourceAttachments || [],
         isActive: guide.isActive,
       });
     }
@@ -242,7 +246,7 @@ export default function GuideEditor() {
               </div>
 
               {/* Global Information */}
-              <div className="bg-muted rounded-lg p-4">
+              <div className="bg-muted rounded-lg p-4 mb-4">
                 <h4 className="text-sm font-medium text-foreground mb-2">Guide Overview</h4>
                 <Textarea
                   value={guideData.globalInformation}
@@ -251,6 +255,118 @@ export default function GuideEditor() {
                   className="bg-background h-60"
                   data-testid="input-guide-overview"
                 />
+              </div>
+
+              {/* Resource Links */}
+              <div className="bg-muted rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-foreground mb-2">Resource Links (Optional)</h4>
+                <div className="space-y-2">
+                  {guideData.resourceLinks.map((link, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="Link title"
+                        value={link.title}
+                        onChange={(e) => {
+                          const newLinks = [...guideData.resourceLinks];
+                          newLinks[index].title = e.target.value;
+                          setGuideData(prev => ({ ...prev, resourceLinks: newLinks }));
+                        }}
+                        className="flex-1 bg-background"
+                      />
+                      <Input
+                        placeholder="URL"
+                        value={link.url}
+                        onChange={(e) => {
+                          const newLinks = [...guideData.resourceLinks];
+                          newLinks[index].url = e.target.value;
+                          setGuideData(prev => ({ ...prev, resourceLinks: newLinks }));
+                        }}
+                        className="flex-1 bg-background"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const newLinks = guideData.resourceLinks.filter((_, i) => i !== index);
+                          setGuideData(prev => ({ ...prev, resourceLinks: newLinks }));
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGuideData(prev => ({ 
+                      ...prev, 
+                      resourceLinks: [...prev.resourceLinks, { title: "", url: "" }] 
+                    }))}
+                  >
+                    + Add Resource Link
+                  </Button>
+                </div>
+              </div>
+
+              {/* Resource Attachments */}
+              <div className="bg-muted rounded-lg p-4">
+                <h4 className="text-sm font-medium text-foreground mb-2">Resource Attachments (Optional)</h4>
+                <div className="space-y-2">
+                  {guideData.resourceAttachments.map((attachment, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        placeholder="File name"
+                        value={attachment.name}
+                        onChange={(e) => {
+                          const newAttachments = [...guideData.resourceAttachments];
+                          newAttachments[index].name = e.target.value;
+                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
+                        }}
+                        className="flex-1 bg-background"
+                      />
+                      <Input
+                        placeholder="File URL"
+                        value={attachment.url}
+                        onChange={(e) => {
+                          const newAttachments = [...guideData.resourceAttachments];
+                          newAttachments[index].url = e.target.value;
+                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
+                        }}
+                        className="flex-1 bg-background"
+                      />
+                      <Input
+                        placeholder="Category"
+                        value={attachment.category}
+                        onChange={(e) => {
+                          const newAttachments = [...guideData.resourceAttachments];
+                          newAttachments[index].category = e.target.value;
+                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
+                        }}
+                        className="w-32 bg-background"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const newAttachments = guideData.resourceAttachments.filter((_, i) => i !== index);
+                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGuideData(prev => ({ 
+                      ...prev, 
+                      resourceAttachments: [...prev.resourceAttachments, { name: "", url: "", category: "" }] 
+                    }))}
+                  >
+                    + Add Resource Attachment
+                  </Button>
+                </div>
               </div>
             </div>
 
