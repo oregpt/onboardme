@@ -181,7 +181,7 @@ export default function GuideEditor() {
                       value={guideData.title}
                       onChange={(e) => setGuideData(prev => ({ ...prev, title: e.target.value }))}
                       placeholder="Enter guide title..."
-                      className="w-full min-w-[500px]"
+                      className="w-full"
                       data-testid="input-guide-title"
                     />
                   </div>
@@ -194,7 +194,7 @@ export default function GuideEditor() {
                       value={guideData.description}
                       onChange={(e) => setGuideData(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Brief description of this guide..."
-                      className="h-20 w-full min-w-[500px]"
+                      className="h-20 w-full"
                       data-testid="input-guide-description"
                     />
                   </div>
