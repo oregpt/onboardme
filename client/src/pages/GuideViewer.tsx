@@ -544,6 +544,7 @@ export default function GuideViewer() {
           flowBox={currentChatFlowBox}
           currentStep={currentChatStep}
           allSteps={allSteps}
+          allFlowBoxes={flowBoxes || []}
           isOpen={isChatOpen}
           onToggle={() => setIsChatOpen(!isChatOpen)}
         />

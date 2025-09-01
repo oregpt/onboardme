@@ -22,13 +22,13 @@ export interface AIResponse {
 // Knowledge base context interface
 export interface KnowledgeContext {
   guide: Guide;
-  flowBox: FlowBox;
-  currentStep: Step;
+  flowBox?: FlowBox | null;
+  currentStep?: Step | null;
   allSteps: Step[];
   generalFiles: any[];
   faqFiles: any[];
   otherHelpFiles: any[];
-  agentInstructions?: string;
+  agentInstructions?: string | null;
 }
 
 // OpenAI client
@@ -72,21 +72,27 @@ export class KnowledgeBaseService {
       contextText += `## Global Information\n${guide.globalInformation}\n\n`;
     }
 
-    // Current flow box context
-    contextText += `## Current Flow: ${flowBox.title}\n`;
-    if (flowBox.description) {
-      contextText += `${flowBox.description}\n\n`;
+    // Current flow box context (if specific flow is selected)
+    if (flowBox) {
+      contextText += `## Current Flow: ${flowBox.title}\n`;
+      if (flowBox.description) {
+        contextText += `${flowBox.description}\n\n`;
+      }
+
+      // Agent instructions for this flow
+      if (agentInstructions) {
+        contextText += `## Agent Instructions for this Flow\n${agentInstructions}\n\n`;
+      }
+    } else {
+      contextText += `## Context: All Flows\nUser is asking about the entire guide across all flows.\n\n`;
     }
 
-    // Agent instructions for this flow
-    if (agentInstructions) {
-      contextText += `## Agent Instructions for this Flow\n${agentInstructions}\n\n`;
-    }
-
-    // Current step context
-    contextText += `## Current Step: ${currentStep.title}\n`;
-    if (currentStep.content) {
-      contextText += `${currentStep.content}\n\n`;
+    // Current step context (if specific step is selected)
+    if (currentStep) {
+      contextText += `## Current Step: ${currentStep.title}\n`;
+      if (currentStep.content) {
+        contextText += `${currentStep.content}\n\n`;
+      }
     }
 
     // All steps in the guide for broader context
@@ -173,7 +179,8 @@ Guidelines:
       }
     } catch (error) {
       console.error(`AI Service Error (${provider}):`, error);
-      throw new Error(`Failed to generate AI response: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to generate AI response: ${errorMessage}`);
     }
   }
 

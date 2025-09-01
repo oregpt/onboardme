@@ -348,18 +348,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { message, provider, guideId, flowBoxId, stepId } = req.body;
       
-      if (!message || !guideId || !flowBoxId || !stepId) {
+      if (!message || !guideId) {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
       // Get all required data for context
       const guide = await storage.getGuide(guideId);
-      const flowBox = await storage.getFlowBox(flowBoxId);
-      const currentStep = await storage.getStep(stepId);
       const allSteps = await storage.getStepsByGuide(guideId);
 
-      if (!guide || !flowBox || !currentStep) {
-        return res.status(404).json({ message: "Guide, flow box, or step not found" });
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      // Handle "All flows" selection or specific flow/step
+      let flowBox = null;
+      let currentStep = null;
+
+      if (flowBoxId && stepId) {
+        flowBox = await storage.getFlowBox(flowBoxId);
+        currentStep = await storage.getStep(stepId);
+        
+        if (!flowBox || !currentStep) {
+          return res.status(404).json({ message: "Flow box or step not found" });
+        }
       }
 
       // Categorize attachments from all steps
@@ -380,7 +391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         generalFiles,
         faqFiles,
         otherHelpFiles,
-        agentInstructions: (flowBox as any).agentInstructions
+        agentInstructions: flowBox ? (flowBox as any).agentInstructions : null
       };
 
       // Generate AI response

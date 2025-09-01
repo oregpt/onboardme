@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -24,6 +25,7 @@ interface AIChatProps {
   flowBox: FlowBox;
   currentStep: Step;
   allSteps: Step[];
+  allFlowBoxes: FlowBox[];
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -36,11 +38,12 @@ interface ChatMessage {
   model?: string;
 }
 
-export function AIChat({ guide, flowBox, currentStep, allSteps, isOpen, onToggle }: AIChatProps) {
+export function AIChat({ guide, flowBox, currentStep, allSteps, allFlowBoxes, isOpen, onToggle }: AIChatProps) {
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'xai'>('anthropic');
+  const [selectedFlowId, setSelectedFlowId] = useState<string>(flowBox.id.toString());
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -54,21 +57,26 @@ export function AIChat({ guide, flowBox, currentStep, allSteps, isOpen, onToggle
 
   const chatMutation = useMutation({
     mutationFn: async ({ message, provider }: { message: string; provider: string }) => {
-      return await apiRequest("POST", "/api/ai/chat", {
+      const selectedFlow = selectedFlowId === 'all' ? null : parseInt(selectedFlowId);
+      const selectedStep = selectedFlowId === 'all' ? null : currentStep.id;
+      
+      const response = await apiRequest("POST", "/api/ai/chat", {
         message,
         provider,
         guideId: guide.id,
-        flowBoxId: flowBox.id,
-        stepId: currentStep.id,
+        flowBoxId: selectedFlow,
+        stepId: selectedStep,
       });
+      
+      return await response.json();
     },
-    onSuccess: (response) => {
+    onSuccess: (data) => {
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: response.content,
+        content: data.content,
         timestamp: new Date(),
-        provider: response.provider,
-        model: response.model,
+        provider: data.provider,
+        model: data.model,
       };
       setMessages(prev => [...prev, assistantMessage]);
     },
@@ -130,9 +138,19 @@ export function AIChat({ guide, flowBox, currentStep, allSteps, isOpen, onToggle
         <div className="flex items-center space-x-2">
           <Brain className="w-5 h-5 text-primary" />
           <CardTitle className="text-sm font-medium">AI Assistant</CardTitle>
-          <Badge variant="outline" className="text-xs">
-            {currentStep.title}
-          </Badge>
+          <Select value={selectedFlowId} onValueChange={setSelectedFlowId}>
+            <SelectTrigger className="w-32 h-6 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Flows</SelectItem>
+              {allFlowBoxes.map((flow) => (
+                <SelectItem key={flow.id} value={flow.id.toString()}>
+                  {flow.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center space-x-1">
           <Button
