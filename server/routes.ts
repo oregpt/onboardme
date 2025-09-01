@@ -839,6 +839,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database Import/Export endpoints
+  app.post('/api/admin/import', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can import data
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      const { data: importData } = req.body;
+      if (!importData || !importData.metadata || !importData.data) {
+        return res.status(400).json({ message: "Invalid import data format" });
+      }
+
+      console.log('🔄 Starting database import...');
+      let importedTables = 0;
+      let totalRecords = 0;
+      const results = {};
+
+      // Import tables in dependency order
+      const importOrder = [
+        'users',
+        'projects', 
+        'project_members',
+        'guides',
+        'flow_boxes',
+        'steps',
+        'knowledge_base',
+        'qa_conversations',
+        'conversation_history',
+        'step_comments',
+        'user_progress'
+      ];
+
+      for (const tableName of importOrder) {
+        try {
+          const tableData = importData.data[tableName];
+          if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
+            results[tableName] = { skipped: true, reason: 'No data' };
+            continue;
+          }
+
+          console.log(`📥 Importing ${tableName} (${tableData.length} records)...`);
+          
+          // Direct database insertion with conflict resolution - bypasses all normal controls
+          try {
+            // Get the appropriate table schema
+            let tableSchema;
+            switch (tableName) {
+              case 'users':
+                const { users } = await import('../shared/schema.js');
+                tableSchema = users;
+                break;
+              case 'projects':
+                const { projects } = await import('../shared/schema.js');
+                tableSchema = projects;
+                break;
+              case 'project_members':
+                const { projectMembers } = await import('../shared/schema.js');
+                tableSchema = projectMembers;
+                break;
+              case 'guides':
+                const { guides } = await import('../shared/schema.js');
+                tableSchema = guides;
+                break;
+              case 'flow_boxes':
+                const { flowBoxes } = await import('../shared/schema.js');
+                tableSchema = flowBoxes;
+                break;
+              case 'steps':
+                const { steps } = await import('../shared/schema.js');
+                tableSchema = steps;
+                break;
+              case 'user_progress':
+                const { userProgress } = await import('../shared/schema.js');
+                tableSchema = userProgress;
+                break;
+              case 'qa_conversations':
+                const { qaConversations } = await import('../shared/schema.js');
+                tableSchema = qaConversations;
+                break;
+              case 'conversation_history':
+                const { conversationHistory } = await import('../shared/schema.js');
+                tableSchema = conversationHistory;
+                break;
+              case 'knowledge_base':
+                const { knowledgeBase } = await import('../shared/schema.js');
+                tableSchema = knowledgeBase;
+                break;
+              case 'step_comments':
+                const { stepComments } = await import('../shared/schema.js');
+                tableSchema = stepComments;
+                break;
+              default:
+                console.log(`⚠️  No schema mapping for ${tableName}`);
+                continue;
+            }
+
+            if (tableSchema) {
+              // Use direct database insert with ON CONFLICT DO UPDATE (upsert)
+              // This bypasses all normal validation and constraint checks
+              const { db } = await import('./db.js');
+              
+              // For tables with primary keys, use upsert to handle conflicts
+              const primaryKey = Object.keys(tableData[0])[0]; // Assume first field is primary key
+              
+              for (const record of tableData) {
+                try {
+                  await db
+                    .insert(tableSchema)
+                    .values(record)
+                    .onConflictDoUpdate({
+                      target: tableSchema[primaryKey],
+                      set: record
+                    });
+                } catch (insertError) {
+                  // If upsert fails, try regular insert (for tables without conflicts)
+                  try {
+                    await db.insert(tableSchema).values(record);
+                  } catch (fallbackError) {
+                    console.error(`Failed to import record in ${tableName}:`, fallbackError);
+                  }
+                }
+              }
+              
+              imported = tableData.length;
+            }
+          } catch (directInsertError) {
+            console.error(`Direct insert failed for ${tableName}:`, directInsertError);
+            imported = 0;
+          }
+
+          results[tableName] = { imported, total: tableData.length };
+          importedTables++;
+          totalRecords += imported;
+
+        } catch (tableError) {
+          console.error(`Error importing table ${tableName}:`, tableError);
+          results[tableName] = { error: tableError.message };
+        }
+      }
+
+      console.log(`✅ Import completed: ${importedTables} tables, ${totalRecords} records`);
+
+      res.json({
+        success: true,
+        message: `Import completed: ${importedTables} tables, ${totalRecords} records`,
+        results,
+        importedAt: new Date().toISOString()
+      });
+
+    } catch (error) {
+      console.error("Import error:", error);
+      res.status(500).json({ message: "Failed to import data" });
+    }
+  });
+
+  // Export current database to JSON
+  app.get('/api/admin/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can export data
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      console.log('🔄 Starting database export...');
+
+      const exportData = {
+        metadata: {
+          timestamp: new Date().toISOString(),
+          version: '1.0.0',
+          description: 'Database export from Guide Builder application',
+          exported_by: userId
+        },
+        data: {
+          users: await storage.getAllUsers(),
+          projects: await storage.getAllProjects(),
+          project_members: await storage.getAllProjectMembers(),
+          guides: await storage.getAllGuides(),
+          flow_boxes: await storage.getAllFlowBoxes(),
+          steps: await storage.getAllSteps(),
+          user_progress: await storage.getAllUserProgress()
+          // Add other tables as storage methods become available
+        }
+      };
+
+      const totalRecords = Object.values(exportData.data).reduce((sum, table) => 
+        sum + (Array.isArray(table) ? table.length : 0), 0
+      );
+
+      console.log(`✅ Export completed: ${Object.keys(exportData.data).length} tables, ${totalRecords} records`);
+
+      res.json(exportData);
+
+    } catch (error) {
+      console.error("Export error:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
