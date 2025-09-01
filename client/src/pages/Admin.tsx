@@ -272,7 +272,7 @@ export default function Admin() {
                           {project.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                         <Badge variant={project.userRole === 'admin' ? 'default' : project.userRole === 'creator' ? 'secondary' : 'outline'}>
-                          {project.userRole.charAt(0).toUpperCase() + project.userRole.slice(1)}
+                          {project.userRole ? project.userRole.charAt(0).toUpperCase() + project.userRole.slice(1) : 'User'}
                         </Badge>
                       </div>
                     </div>
