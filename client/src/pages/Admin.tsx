@@ -35,7 +35,10 @@ interface ProjectMember {
   projectId: number;
   userId: string;
   role: string;
-  joinedAt: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
 }
 
 export default function Admin() {
@@ -45,8 +48,11 @@ export default function Admin() {
   const [expandedProject, setExpandedProject] = useState<number | null>(null);
   const [showAddMember, setShowAddMember] = useState<number | null>(null);
   const [showDeleteProject, setShowDeleteProject] = useState<number | null>(null);
+  const [editingProject, setEditingProject] = useState<number | null>(null);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [editProjectName, setEditProjectName] = useState("");
+  const [editProjectDescription, setEditProjectDescription] = useState("");
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("user");
   const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
@@ -281,16 +287,78 @@ export default function Admin() {
                           <ChevronDown className="w-5 h-5 text-muted-foreground" /> : 
                           <ChevronRight className="w-5 h-5 text-muted-foreground" />
                         }
-                        <div>
-                          <h3 className="font-medium text-lg" data-testid={`project-name-${project.id}`}>
-                            {project.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {project.description || 'No description'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Created {new Date(project.createdAt).toLocaleDateString()}
-                          </p>
+                        <div className="flex-1">
+                          {editingProject === project.id ? (
+                            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                              <Input
+                                value={editProjectName}
+                                onChange={(e) => setEditProjectName(e.target.value)}
+                                className="font-medium text-lg"
+                                data-testid={`input-edit-name-${project.id}`}
+                              />
+                              <Textarea
+                                value={editProjectDescription}
+                                onChange={(e) => setEditProjectDescription(e.target.value)}
+                                className="text-sm resize-none"
+                                rows={2}
+                                data-testid={`textarea-edit-description-${project.id}`}
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    updateProjectMutation.mutate({
+                                      projectId: project.id,
+                                      updates: { name: editProjectName, description: editProjectDescription }
+                                    });
+                                    setEditingProject(null);
+                                  }}
+                                  disabled={!editProjectName || updateProjectMutation.isPending}
+                                  data-testid={`button-save-${project.id}`}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditingProject(null)}
+                                  data-testid={`button-cancel-edit-${project.id}`}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium text-lg" data-testid={`project-name-${project.id}`}>
+                                  {project.name}
+                                </h3>
+                                {(project.userRole === 'admin' || user?.isPlatformAdmin) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditProjectName(project.name);
+                                      setEditProjectDescription(project.description || '');
+                                      setEditingProject(project.id);
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    data-testid={`button-edit-${project.id}`}
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {project.description || 'No description'}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Created {new Date(project.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -516,13 +584,24 @@ export default function Admin() {
                                   className="flex items-center justify-between p-3 border border-border rounded-lg"
                                   data-testid={`member-${member.userId}`}
                                 >
-                                  <div>
-                                    <p className="font-medium" data-testid={`member-id-${member.userId}`}>
-                                      {member.userId}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      Joined {new Date(member.joinedAt).toLocaleDateString()}
-                                    </p>
+                                  <div className="flex items-center gap-3">
+                                    {member.profileImageUrl && (
+                                      <img 
+                                        src={member.profileImageUrl} 
+                                        alt="Profile" 
+                                        className="w-8 h-8 rounded-full object-cover"
+                                      />
+                                    )}
+                                    <div>
+                                      <p className="font-medium" data-testid={`member-email-${member.userId}`}>
+                                        {member.email || `User ${member.userId}`}
+                                      </p>
+                                      {member.firstName || member.lastName ? (
+                                        <p className="text-sm text-muted-foreground">
+                                          {[member.firstName, member.lastName].filter(Boolean).join(' ')}
+                                        </p>
+                                      ) : null}
+                                    </div>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Badge

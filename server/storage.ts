@@ -219,6 +219,12 @@ export class DatabaseStorage implements IStorage {
 
   // Project member operations
   async addProjectMember(projectId: number, userId: string, role: string): Promise<ProjectMember> {
+    // Check if user is already a member
+    const existingMember = await this.getUserProjectRole(userId, projectId);
+    if (existingMember) {
+      throw new Error("User is already a member of this project");
+    }
+    
     const [newMember] = await db.insert(projectMembers).values({
       projectId,
       userId,
@@ -227,10 +233,20 @@ export class DatabaseStorage implements IStorage {
     return newMember;
   }
 
-  async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
+  async getProjectMembers(projectId: number): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: projectMembers.id,
+        projectId: projectMembers.projectId,
+        userId: projectMembers.userId,
+        role: projectMembers.role,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        profileImageUrl: users.profileImageUrl
+      })
       .from(projectMembers)
+      .leftJoin(users, eq(projectMembers.userId, users.id))
       .where(eq(projectMembers.projectId, projectId));
   }
 
