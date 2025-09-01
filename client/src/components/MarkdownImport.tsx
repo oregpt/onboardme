@@ -318,7 +318,7 @@ export default function MarkdownImport() {
               </SelectTrigger>
               <SelectContent>
                 {guidesLoading ? (
-                  <SelectItem value="" disabled>Loading guides...</SelectItem>
+                  <SelectItem value="loading" disabled>Loading guides...</SelectItem>
                 ) : guides && guides.length > 0 ? (
                   guides.map((guide) => (
                     <SelectItem key={guide.id} value={guide.id.toString()}>
@@ -326,7 +326,7 @@ export default function MarkdownImport() {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="" disabled>No guides available</SelectItem>
+                  <SelectItem value="no-guides" disabled>No guides available</SelectItem>
                 )}
               </SelectContent>
             </Select>
