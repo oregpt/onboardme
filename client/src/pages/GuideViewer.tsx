@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide, FlowBox, Step, UserProgress } from "@shared/schema";
-import { CheckCircle, Circle, ArrowLeft, BookOpen, User } from "lucide-react";
+import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 
@@ -129,6 +129,41 @@ export default function GuideViewer() {
         title: "Sign in required",
         description: "Please sign in to track your progress",
         variant: "default",
+      });
+    }
+  };
+
+  const downloadAttachment = (attachment: any) => {
+    try {
+      // Convert base64 data to blob
+      const byteCharacters = atob(attachment.data.split(',')[1] || attachment.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: attachment.type || 'application/octet-stream' });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name || 'attachment';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download started",
+        description: `Downloading ${attachment.name}`,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Could not download the attachment",
+        variant: "destructive",
       });
     }
   };
@@ -289,9 +324,17 @@ export default function GuideViewer() {
                                 {step.attachments && (step.attachments as any[]).length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-2">
                                     {(step.attachments as any[]).map((attachment, idx) => (
-                                      <Badge key={idx} variant="outline">
+                                      <Button
+                                        key={idx}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => downloadAttachment(attachment)}
+                                        className="h-6 px-2 text-xs flex items-center gap-1"
+                                        data-testid={`button-download-attachment-${idx}`}
+                                      >
+                                        <Download className="w-3 h-3" />
                                         {attachment.name || attachment.type}
-                                      </Badge>
+                                      </Button>
                                     ))}
                                   </div>
                                 )}
