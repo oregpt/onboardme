@@ -268,6 +268,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/guides/:guideId/progress/steps/:stepId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.guideId);
+      const stepId = parseInt(req.params.stepId);
+      
+      await storage.unmarkStepComplete(userId, guideId, stepId);
+      res.json({ message: "Step unmarked as complete" });
+    } catch (error) {
+      console.error("Error unmarking step complete:", error);
+      res.status(500).json({ message: "Failed to unmark step complete" });
+    }
+  });
+
+  app.delete('/api/guides/:guideId/progress/flowboxes/:flowBoxId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const guideId = parseInt(req.params.guideId);
+      const flowBoxId = parseInt(req.params.flowBoxId);
+      
+      await storage.unmarkFlowBoxComplete(userId, guideId, flowBoxId);
+      res.json({ message: "Flow box unmarked as complete" });
+    } catch (error) {
+      console.error("Error unmarking flow box complete:", error);
+      res.status(500).json({ message: "Failed to unmark flow box complete" });
+    }
+  });
+
   // Q&A routes
   app.get('/api/guides/:guideId/qa', async (req, res) => {
     try {

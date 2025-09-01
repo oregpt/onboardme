@@ -74,6 +74,31 @@ export default function GuideViewer() {
     },
   });
 
+  const unmarkStepCompleteMutation = useMutation({
+    mutationFn: async (stepId: number) => {
+      await apiRequest("DELETE", `/api/guides/${guide?.id}/progress/steps/${stepId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guides", guide?.id, "progress"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update progress",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unmarkFlowBoxCompleteMutation = useMutation({
+    mutationFn: async (flowBoxId: number) => {
+      await apiRequest("DELETE", `/api/guides/${guide?.id}/progress/flowboxes/${flowBoxId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/guides", guide?.id, "progress"] });
+    },
+  });
+
   if (guideLoading || flowBoxesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -110,9 +135,14 @@ export default function GuideViewer() {
     return acc;
   }, {} as Record<number, Step[]>) || {};
 
-  const handleStepComplete = (stepId: number) => {
+  const handleStepToggle = (stepId: number) => {
     if (isAuthenticated) {
-      markStepCompleteMutation.mutate(stepId);
+      const isCompleted = (userProgress?.completedSteps as number[])?.includes(stepId);
+      if (isCompleted) {
+        unmarkStepCompleteMutation.mutate(stepId);
+      } else {
+        markStepCompleteMutation.mutate(stepId);
+      }
     } else {
       toast({
         title: "Sign in required",
@@ -122,14 +152,24 @@ export default function GuideViewer() {
     }
   };
 
-  const handleFlowComplete = (flowBoxId: number) => {
+  const handleFlowToggle = (flowBoxId: number) => {
     if (isAuthenticated) {
-      markFlowBoxCompleteMutation.mutate(flowBoxId);
-      toast({
-        title: "Flow marked complete",
-        description: "All steps in this flow have been marked as complete",
-        variant: "default",
-      });
+      const isCompleted = (userProgress?.completedFlowBoxes as number[])?.includes(flowBoxId);
+      if (isCompleted) {
+        unmarkFlowBoxCompleteMutation.mutate(flowBoxId);
+        toast({
+          title: "Flow unmarked",
+          description: "Flow box and its steps have been unmarked as complete",
+          variant: "default",
+        });
+      } else {
+        markFlowBoxCompleteMutation.mutate(flowBoxId);
+        toast({
+          title: "Flow marked complete",
+          description: "All steps in this flow have been marked as complete",
+          variant: "default",
+        });
+      }
     } else {
       toast({
         title: "Sign in required",
@@ -275,15 +315,18 @@ export default function GuideViewer() {
                           <Badge variant="outline">
                             {completedBoxSteps}/{boxSteps.length} steps
                           </Badge>
-                          {!isBoxCompleted && isAuthenticated && (
+                          {isAuthenticated && (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleFlowComplete(flowBox.id)}
-                              disabled={markFlowBoxCompleteMutation.isPending}
-                              data-testid={`button-complete-flow-${flowBox.id}`}
+                              onClick={() => handleFlowToggle(flowBox.id)}
+                              disabled={markFlowBoxCompleteMutation.isPending || unmarkFlowBoxCompleteMutation.isPending}
+                              data-testid={`button-toggle-flow-${flowBox.id}`}
                             >
-                              {markFlowBoxCompleteMutation.isPending ? "Marking..." : "Mark Flow Complete"}
+                              {(markFlowBoxCompleteMutation.isPending || unmarkFlowBoxCompleteMutation.isPending) ? 
+                                "Updating..." : 
+                                (isBoxCompleted ? "Unmark Flow" : "Mark Flow Complete")
+                              }
                             </Button>
                           )}
                           {isBoxCompleted && (
@@ -306,12 +349,13 @@ export default function GuideViewer() {
                             >
                               <div className="flex flex-col space-y-2">
                                 <button
-                                  onClick={() => handleStepComplete(step.id)}
+                                  onClick={() => handleStepToggle(step.id)}
                                   disabled={!isAuthenticated}
-                                  data-testid={`button-complete-step-${step.id}`}
+                                  data-testid={`button-toggle-step-${step.id}`}
+                                  className="transition-colors duration-200"
                                 >
                                   {isStepCompleted ? (
-                                    <CheckCircle className="w-5 h-5 text-primary" />
+                                    <CheckCircle className="w-5 h-5 text-primary hover:text-primary/80" />
                                   ) : (
                                     <Circle className="w-5 h-5 text-muted-foreground hover:text-primary" />
                                   )}
@@ -459,7 +503,7 @@ export default function GuideViewer() {
                 flowBoxes={flowBoxes || []}
                 steps={groupedSteps}
                 userProgress={userProgress}
-                onStepComplete={handleStepComplete}
+                onStepComplete={handleStepToggle}
               />
             )}
 

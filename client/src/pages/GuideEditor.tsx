@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide, FlowBox, Step } from "@shared/schema";
-import { Save, Eye, Settings, ChevronRight } from "lucide-react";
+import { Save, Eye, Settings, ChevronRight, Upload, X, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function GuideEditor() {
@@ -29,7 +29,7 @@ export default function GuideEditor() {
     globalInformation: "",
     personas: ["Developer", "Designer", "Product Manager", "Customer Success", "Finance", "CxO", "Consultant", "Other", "General"],
     resourceLinks: [] as Array<{title: string, url: string}>,
-    resourceAttachments: [] as Array<{name: string, url: string, category: string}>,
+    resourceAttachments: [] as Array<{id: number, name: string, type: string, size: number, data: string, category: string}>,
     isActive: true,
   });
 
@@ -74,6 +74,52 @@ export default function GuideEditor() {
       setGuideData(prev => ({ ...prev, slug }));
     }
   }, [guideData.title, isEditing]);
+
+  // Helper function for file size formatting
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Handle file selection for resource attachments
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newAttachment = {
+          id: Date.now() + Math.random(), // Simple ID generation
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: event.target?.result as string, // Base64 data
+          category: 'general', // Default category
+        };
+        
+        setGuideData(prev => ({
+          ...prev,
+          resourceAttachments: [...prev.resourceAttachments, newAttachment]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input
+    e.target.value = '';
+  };
+
+  // Remove attachment
+  const removeAttachment = (id: number) => {
+    setGuideData(prev => ({
+      ...prev,
+      resourceAttachments: prev.resourceAttachments.filter(att => att.id !== id)
+    }));
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -313,62 +359,68 @@ export default function GuideEditor() {
               {/* Resource Attachments */}
               <div className="bg-muted rounded-lg p-4">
                 <h4 className="text-sm font-medium text-foreground mb-2">Resource Attachments (Optional)</h4>
-                <div className="space-y-2">
-                  {guideData.resourceAttachments.map((attachment, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        placeholder="File name"
-                        value={attachment.name}
-                        onChange={(e) => {
-                          const newAttachments = [...guideData.resourceAttachments];
-                          newAttachments[index].name = e.target.value;
-                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
-                        }}
-                        className="flex-1 bg-background"
-                      />
-                      <Input
-                        placeholder="File URL"
-                        value={attachment.url}
-                        onChange={(e) => {
-                          const newAttachments = [...guideData.resourceAttachments];
-                          newAttachments[index].url = e.target.value;
-                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
-                        }}
-                        className="flex-1 bg-background"
-                      />
-                      <Input
-                        placeholder="Category"
-                        value={attachment.category}
-                        onChange={(e) => {
-                          const newAttachments = [...guideData.resourceAttachments];
-                          newAttachments[index].category = e.target.value;
-                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
-                        }}
-                        className="w-32 bg-background"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const newAttachments = guideData.resourceAttachments.filter((_, i) => i !== index);
-                          setGuideData(prev => ({ ...prev, resourceAttachments: newAttachments }));
-                        }}
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  ))}
+                
+                {/* Upload Button */}
+                <div className="flex items-center space-x-2 mb-4">
+                  <input
+                    type="file"
+                    id="resource-upload"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif,.zip,.xlsx,.pptx"
+                  />
                   <Button
-                    size="sm"
                     variant="outline"
-                    onClick={() => setGuideData(prev => ({ 
-                      ...prev, 
-                      resourceAttachments: [...prev.resourceAttachments, { name: "", url: "", category: "" }] 
-                    }))}
+                    size="sm"
+                    onClick={() => document.getElementById('resource-upload')?.click()}
+                    data-testid="button-upload-resources"
                   >
-                    + Add Resource Attachment
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Files
                   </Button>
+                  <span className="text-xs text-muted-foreground">
+                    PDF, DOC, Images, Archives, etc.
+                  </span>
                 </div>
+
+                {/* Attachment List */}
+                {guideData.resourceAttachments.length > 0 ? (
+                  <div className="space-y-2">
+                    {guideData.resourceAttachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between p-2 border border-border rounded-md bg-background"
+                        data-testid={`resource-attachment-${attachment.id}`}
+                      >
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <Paperclip className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {attachment.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(attachment.size)} • {attachment.type}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeAttachment(attachment.id)}
+                          className="text-destructive hover:text-destructive"
+                          data-testid={`button-remove-resource-${attachment.id}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No files uploaded yet. Upload helpful resources for this guide.
+                  </p>
+                )}
               </div>
             </div>
 

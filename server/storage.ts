@@ -290,6 +290,43 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async unmarkStepComplete(userId: string, guideId: number, stepId: number): Promise<void> {
+    const progress = await this.getUserProgress(userId, guideId);
+    const completedSteps = (progress?.completedSteps as number[]) || [];
+    
+    if (completedSteps.includes(stepId)) {
+      const updatedSteps = completedSteps.filter(id => id !== stepId);
+      await this.updateUserProgress(userId, guideId, { 
+        completedSteps: updatedSteps
+      });
+    }
+  }
+
+  async unmarkFlowBoxComplete(userId: string, guideId: number, flowBoxId: number): Promise<void> {
+    const progress = await this.getUserProgress(userId, guideId);
+    const completedFlowBoxes = (progress?.completedFlowBoxes as number[]) || [];
+    const completedSteps = (progress?.completedSteps as number[]) || [];
+    
+    if (completedFlowBoxes.includes(flowBoxId)) {
+      // Get all steps in this flow box
+      const flowBoxSteps = await this.getStepsByFlowBox(flowBoxId);
+      
+      // Remove all steps from this flow box from completed steps
+      const updatedSteps = completedSteps.filter(stepId => 
+        !flowBoxSteps.some(step => step.id === stepId)
+      );
+      
+      // Remove flow box from completed flow boxes
+      const updatedFlowBoxes = completedFlowBoxes.filter(id => id !== flowBoxId);
+      
+      // Update progress
+      await this.updateUserProgress(userId, guideId, { 
+        completedFlowBoxes: updatedFlowBoxes,
+        completedSteps: updatedSteps
+      });
+    }
+  }
+
   // Q&A operations
   async createQAConversation(qa: InsertQAConversation): Promise<QAConversation> {
     const [newQA] = await db.insert(qaConversations).values(qa).returning();
