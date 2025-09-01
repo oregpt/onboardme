@@ -6,14 +6,26 @@ import type { Guide } from "@shared/schema";
 import { Plus, Edit, Eye, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProjectContext } from "@/components/AppLayout";
+import { useAuth } from "@/hooks/useAuth";
 import { useMemo } from "react";
 
 export default function Guides() {
   const { selectedProjectId } = useProjectContext();
+  const { isAuthenticated } = useAuth();
   
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
+
+  // Get user's projects to determine role
+  const { data: projects } = useQuery<Array<{id: number, userRole: string}>>({
+    queryKey: ["/api/projects"], 
+    enabled: isAuthenticated
+  });
+
+  // For now, use the first project's role (can be enhanced for multi-project context)
+  const userRole = projects?.[0]?.userRole || 'user';
+  const canCreateGuides = userRole === 'admin' || userRole === 'creator';
 
   // Filter guides by selected project
   const guides = useMemo(() => {
@@ -33,12 +45,14 @@ export default function Guides() {
                 Manage your onboarding guides and workflows
               </p>
             </div>
-            <Link href="/editor">
-              <Button data-testid="button-create-guide">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Guide
-              </Button>
-            </Link>
+            {canCreateGuides && (
+              <Link href="/editor">
+                <Button data-testid="button-create-guide">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Guide
+                </Button>
+              </Link>
+            )}
           </div>
         </header>
 
@@ -91,14 +105,16 @@ export default function Guides() {
                 <div className="col-span-full text-center py-16">
                   <h3 className="text-lg font-medium text-foreground mb-2">No guides yet</h3>
                   <p className="text-muted-foreground mb-6">
-                    Create your first onboarding guide to get started
+                    {canCreateGuides ? 'Create your first onboarding guide to get started' : 'No guides available in your current project'}
                   </p>
-                  <Link href="/editor">
-                    <Button data-testid="button-create-first-guide">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Your First Guide
-                    </Button>
-                  </Link>
+                  {canCreateGuides && (
+                    <Link href="/editor">
+                      <Button data-testid="button-create-first-guide">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Your First Guide
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
