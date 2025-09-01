@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema } from "@shared/schema";
 import { AIService, KnowledgeContext, type AIProvider, type ConversationContext } from "./aiService";
-import { importGuideFromCSV, type ImportResult } from "./csvImporter";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -436,40 +435,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting guide:", error);
       res.status(500).json({ message: "Failed to delete guide" });
-    }
-  });
-
-  // CSV Import endpoint
-  app.post('/api/guides/:id/import-csv', isAuthenticated, async (req, res) => {
-    try {
-      const guideId = parseInt(req.params.id);
-      const { csvContent } = req.body;
-      
-      if (!csvContent) {
-        return res.status(400).json({ message: "CSV content is required" });
-      }
-
-      // Verify guide exists and user has access
-      const guide = await storage.getGuide(guideId);
-      if (!guide) {
-        return res.status(404).json({ message: "Guide not found" });
-      }
-
-      const result: ImportResult = await importGuideFromCSV(guideId, csvContent);
-      
-      if (result.success) {
-        res.json(result);
-      } else {
-        res.status(400).json(result);
-      }
-    } catch (error) {
-      console.error("Error importing CSV:", error);
-      res.status(500).json({ 
-        success: false,
-        message: "Failed to import CSV content",
-        results: { flowBoxesCreated: 0, stepsCreated: 0, flows: [] },
-        importedAt: new Date()
-      });
     }
   });
 

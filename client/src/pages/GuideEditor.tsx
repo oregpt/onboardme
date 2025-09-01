@@ -8,14 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sidebar } from "@/components/Sidebar";
 import { FlowEditor } from "@/components/FlowEditor";
 import { StepEditor } from "@/components/StepEditor";
-import { CSVImport } from "@/components/CSVImport";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide, FlowBox, Step } from "@shared/schema";
-import { Save, Eye, Settings, ChevronRight, Upload, X, Paperclip, FileText } from "lucide-react";
+import { Save, Eye, Settings, ChevronRight, Upload, X, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function GuideEditor() {
   const [, params] = useRoute("/editor/:id?");
