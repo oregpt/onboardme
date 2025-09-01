@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -37,6 +39,8 @@ interface FlowEditorProps {
 export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }: FlowEditorProps) {
   const { toast } = useToast();
   const [editingBox, setEditingBox] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingDescription, setEditingDescription] = useState("");
 
   // Fetch steps for each flow box
   const { data: allSteps } = useQuery<Step[]>({
@@ -166,6 +170,29 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
     }
   };
 
+  const startEditing = (flowBox: FlowBox) => {
+    setEditingBox(flowBox.id);
+    setEditingTitle(flowBox.title);
+    setEditingDescription(flowBox.description || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingBox(null);
+    setEditingTitle("");
+    setEditingDescription("");
+  };
+
+  const saveEdit = (id: number) => {
+    updateFlowBoxMutation.mutate({
+      id,
+      updates: { 
+        title: editingTitle.trim() || "Untitled Flow Box",
+        description: editingDescription.trim()
+      }
+    });
+    cancelEditing();
+  };
+
   // Group steps by flow box
   const stepsByFlowBox = allSteps?.reduce((acc, step) => {
     if (!acc[step.flowBoxId]) {
@@ -220,9 +247,48 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                   }`}>
                     {index + 1}
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">{flowBox.title}</h4>
-                    <p className="text-sm text-muted-foreground">{flowBox.description}</p>
+                  <div className="flex-1">
+                    {editingBox === flowBox.id ? (
+                      <div className="space-y-2">
+                        <Input
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          placeholder="Flow box title"
+                          className="font-semibold"
+                          data-testid={`input-flowbox-title-${flowBox.id}`}
+                        />
+                        <Textarea
+                          value={editingDescription}
+                          onChange={(e) => setEditingDescription(e.target.value)}
+                          placeholder="Flow box description"
+                          className="text-sm resize-none"
+                          rows={2}
+                          data-testid={`textarea-flowbox-description-${flowBox.id}`}
+                        />
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => saveEdit(flowBox.id)}
+                            data-testid={`button-save-flowbox-${flowBox.id}`}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEditing}
+                            data-testid={`button-cancel-flowbox-${flowBox.id}`}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <h4 className="font-semibold text-foreground">{flowBox.title}</h4>
+                        <p className="text-sm text-muted-foreground">{flowBox.description}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -238,7 +304,7 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditingBox(flowBox.id)}>
+                      <DropdownMenuItem onClick={() => startEditing(flowBox)}>
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
                       </DropdownMenuItem>

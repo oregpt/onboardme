@@ -21,13 +21,13 @@ export default function GuideEditor() {
   const { toast } = useToast();
   
   const [selectedStep, setSelectedStep] = useState<Step | null>(null);
-  const [selectedPersona, setSelectedPersona] = useState<string>("Senior Developer");
+  const [selectedPersona, setSelectedPersona] = useState<string>("Developer");
   const [guideData, setGuideData] = useState({
     title: "",
     description: "",
     slug: "",
     globalInformation: "",
-    personas: ["Senior Developer", "Junior Developer", "Technical PM"],
+    personas: ["Developer", "Designer", "Product Manager", "Customer Success", "Finance", "CxO", "Consultant", "Other", "General"],
     isActive: true,
   });
 
@@ -54,7 +54,7 @@ export default function GuideEditor() {
         description: guide.description || "",
         slug: guide.slug,
         globalInformation: guide.globalInformation || "",
-        personas: (guide.personas as string[]) || ["Senior Developer", "Junior Developer", "Technical PM"],
+        personas: (guide.personas as string[]) || ["Developer", "Designer", "Product Manager", "Customer Success", "Finance", "CxO", "Consultant", "Other", "General"],
         isActive: guide.isActive,
       });
     }
