@@ -205,7 +205,7 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
   return (
     <div className="bg-card rounded-lg border border-border p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Integration Flow</h3>
+        <h3 className="text-lg font-semibold text-foreground">Guide Flow</h3>
         <div className="flex items-center space-x-2">
           <Button 
             variant="ghost" 
