@@ -438,6 +438,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User progress statistics endpoint
+  app.get('/api/user-progress/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const stats = await storage.getUserProgressStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error getting user progress stats:', error);
+      res.status(500).json({ message: 'Failed to get user progress stats' });
+    }
+  });
+
   // Markdown import endpoint - bypasses typical controls for production use
   app.post('/api/guides/import-markdown', isAuthenticated, async (req: any, res) => {
     try {

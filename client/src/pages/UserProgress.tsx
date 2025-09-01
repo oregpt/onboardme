@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { Guide } from "@shared/schema";
-import { Users, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { Users, TrendingUp, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProjectContext } from "@/components/AppLayout";
 import { useMemo } from "react";
@@ -13,6 +13,15 @@ export default function UserProgress() {
   
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
+  });
+
+  // Fetch real user progress statistics
+  const { data: stats, isLoading: statsLoading } = useQuery<{
+    totalUsers: number;
+    avgCompletion: number;
+    completedGuides: number;
+  }>({
+    queryKey: ["/api/user-progress/stats"],
   });
 
   // Filter guides by selected project
@@ -46,15 +55,17 @@ export default function UserProgress() {
 
         <div className="flex-1 p-6 overflow-auto">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground">No data available</p>
+                <div className="text-2xl font-bold">{statsLoading ? '...' : stats?.totalUsers || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {statsLoading ? 'Loading...' : stats?.totalUsers ? 'Active users' : 'No data available'}
+                </p>
               </CardContent>
             </Card>
             
@@ -64,30 +75,23 @@ export default function UserProgress() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0%</div>
-                <p className="text-xs text-muted-foreground">No data available</p>
+                <div className="text-2xl font-bold">{statsLoading ? '...' : `${stats?.avgCompletion || 0}%`}</div>
+                <p className="text-xs text-muted-foreground">
+                  {statsLoading ? 'Loading...' : stats?.avgCompletion ? 'Average progress' : 'No data available'}
+                </p>
               </CardContent>
             </Card>
             
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Time</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0m</div>
-                <p className="text-xs text-muted-foreground">No data available</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                <CardTitle className="text-sm font-medium">Completed Guides</CardTitle>
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground">No data available</p>
+                <div className="text-2xl font-bold">{statsLoading ? '...' : stats?.completedGuides || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {statsLoading ? 'Loading...' : stats?.completedGuides ? 'Fully completed' : 'No data available'}
+                </p>
               </CardContent>
             </Card>
           </div>

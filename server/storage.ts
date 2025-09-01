@@ -433,6 +433,64 @@ export class DatabaseStorage implements IStorage {
     return progress;
   }
 
+  async getUserProgressStats(): Promise<{
+    totalUsers: number;
+    avgCompletion: number;
+    completedGuides: number;
+  }> {
+    // Get all user progress records
+    const allProgress = await db.select().from(userProgress);
+    
+    // Get all unique users
+    const uniqueUsers = new Set(allProgress.map(p => p.userId));
+    const totalUsers = uniqueUsers.size;
+
+    if (totalUsers === 0) {
+      return {
+        totalUsers: 0,
+        avgCompletion: 0,
+        completedGuides: 0
+      };
+    }
+
+    // Calculate average completion percentage
+    let totalCompletionPercentage = 0;
+    let completedGuides = 0;
+    
+    for (const progress of allProgress) {
+      const completedSteps = (progress.completedSteps as number[]) || [];
+      
+      // Get total steps for this guide by joining through flowBoxes
+      const guideSteps = await db
+        .select()
+        .from(steps)
+        .innerJoin(flowBoxes, eq(steps.flowBoxId, flowBoxes.id))
+        .where(eq(flowBoxes.guideId, progress.guideId));
+      
+      const totalSteps = guideSteps.length;
+      
+      if (totalSteps > 0) {
+        const completion = (completedSteps.length / totalSteps) * 100;
+        totalCompletionPercentage += completion;
+        
+        // Count as completed if 100% done
+        if (completion >= 100) {
+          completedGuides++;
+        }
+      }
+    }
+
+    const avgCompletion = allProgress.length > 0 
+      ? Math.round(totalCompletionPercentage / allProgress.length)
+      : 0;
+
+    return {
+      totalUsers,
+      avgCompletion,
+      completedGuides
+    };
+  }
+
   async updateUserProgress(userId: string, guideId: number, updates: Partial<InsertUserProgress>): Promise<UserProgress> {
     const existing = await this.getUserProgress(userId, guideId);
     
