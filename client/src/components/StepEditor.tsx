@@ -187,7 +187,14 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
         applyFormatting(textarea, "*", "*", "italic text");
         break;
       case "code":
-        applyFormatting(textarea, "`", "`", "code");
+        const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
+        if (hasSelection) {
+          // If text is selected, wrap it in a code block
+          applyFormatting(textarea, "```\n", "\n```", "");
+        } else {
+          // If no selection, insert a code block template
+          applyFormatting(textarea, "```\n", "\n```", "// Your code here");
+        }
         break;
       case "link":
         applyFormatting(textarea, "[", "](https://example.com)", "link text");
