@@ -438,6 +438,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Markdown import endpoint - bypasses typical controls for production use
+  app.post('/api/guides/import-markdown', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { guideId, flowBoxes } = req.body;
+
+      if (!guideId || !flowBoxes || !Array.isArray(flowBoxes)) {
+        return res.status(400).json({ message: "Invalid import data: guideId and flowBoxes array required" });
+      }
+
+      // Verify guide exists and user has access
+      const guide = await storage.getGuide(guideId);
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+
+      let flowBoxesCreated = 0;
+      let stepsCreated = 0;
+
+      // Get the highest position for flow boxes to append new ones
+      const existingFlowBoxes = await storage.getFlowBoxes(guideId);
+      let maxPosition = Math.max(...existingFlowBoxes.map(fb => fb.position), 0);
+
+      // Process each flow box
+      for (const flowBoxData of flowBoxes) {
+        try {
+          // Create flow box
+          const flowBox = await storage.createFlowBox({
+            guideId,
+            title: flowBoxData.title,
+            description: flowBoxData.description || null,
+            position: ++maxPosition,
+            isVisible: true
+          });
+          flowBoxesCreated++;
+
+          // Create steps for this flow box
+          let stepPosition = 1;
+          for (const stepData of flowBoxData.steps) {
+            await storage.createStep({
+              flowBoxId: flowBox.id,
+              title: stepData.title,
+              content: stepData.content,
+              position: stepPosition++,
+              isVisible: true,
+              isCritical: false
+            });
+            stepsCreated++;
+          }
+        } catch (error) {
+          console.error(`Error creating flow box "${flowBoxData.title}":`, error);
+          throw error;
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully imported ${flowBoxesCreated} flow boxes with ${stepsCreated} steps`,
+        flowBoxesCreated,
+        stepsCreated
+      });
+
+    } catch (error) {
+      console.error("Error importing markdown:", error);
+      res.status(500).json({ 
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to import markdown content" 
+      });
+    }
+  });
+
   // Flow box routes
   app.get('/api/guides/:guideId/flowboxes', async (req, res) => {
     try {

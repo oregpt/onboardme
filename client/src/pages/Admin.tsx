@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle, FileText } from "lucide-react";
+import MarkdownImport from "@/components/MarkdownImport";
 
 interface Project {
   id: number;
@@ -652,6 +653,21 @@ export default function Admin() {
               </Button>
             </div>
           )}
+
+          {/* Markdown Import Section */}
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Import Markdown Guide
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MarkdownImport />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
