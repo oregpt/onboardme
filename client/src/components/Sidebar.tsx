@@ -28,7 +28,6 @@ export function Sidebar() {
     { href: "/editor", icon: GitBranch, label: "Flow Editor" },
     { href: "/users", icon: Users, label: "User Progress" },
     { href: "/qa", icon: MessageCircle, label: "Q&A Analytics" },
-    { href: "/knowledge", icon: Database, label: "Knowledge Base" },
     { href: "/admin/1", icon: Settings, label: "Admin" },
   ];
 
