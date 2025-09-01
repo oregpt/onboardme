@@ -1,0 +1,223 @@
+{
+  "backup_info": {
+    "timestamp": "2025-09-01T21:44:00.000Z",
+    "version": "1.0.0",
+    "description": "Complete database backup of Guide Builder application",
+    "tables_included": ["users", "projects", "project_members", "guides", "flow_boxes", "steps"]
+  },
+  "users": [
+    {
+      "id": "44848750",
+      "email": "ore.phillips@icloud.com",
+      "first_name": "Ore",
+      "last_name": "Phillips",
+      "profile_image_url": null,
+      "created_at": "2025-09-01T16:12:46.829Z",
+      "updated_at": "2025-09-01T16:12:46.829Z",
+      "is_platform_admin": true
+    },
+    {
+      "id": "lamira-admin",
+      "email": "lamira@novellum.ai",
+      "first_name": "Lamira",
+      "last_name": "",
+      "profile_image_url": null,
+      "created_at": "2025-09-01T20:48:47.218Z",
+      "updated_at": "2025-09-01T20:48:47.218Z",
+      "is_platform_admin": true
+    },
+    {
+      "id": "test-user-123",
+      "email": "testuser@example.com",
+      "first_name": "Test",
+      "last_name": "User",
+      "profile_image_url": null,
+      "created_at": "2025-09-01T20:49:43.234Z",
+      "updated_at": "2025-09-01T20:49:43.234Z",
+      "is_platform_admin": false
+    }
+  ],
+  "projects": [
+    {
+      "id": 1,
+      "name": "ATXP Onboarding",
+      "description": "",
+      "slug": "atxp-onboarding",
+      "owner_id": "44848750",
+      "personas": ["Developer", "Business Owner"],
+      "created_at": "2025-09-01T16:13:40.001Z",
+      "updated_at": "2025-09-01T16:13:40.001Z"
+    },
+    {
+      "id": 5,
+      "name": "DEMO PROJECT",
+      "description": "This is a demo project for testing purposes",
+      "slug": "demo-project",
+      "owner_id": "44848750",
+      "personas": ["Developer", "Business Owner"],
+      "created_at": "2025-09-01T20:10:13.825Z",
+      "updated_at": "2025-09-01T20:10:13.825Z"
+    }
+  ],
+  "project_members": [
+    {
+      "id": 1,
+      "project_id": 1,
+      "user_id": "44848750",
+      "role": "admin"
+    },
+    {
+      "id": 3,
+      "project_id": 1,
+      "user_id": "lamira-admin",
+      "role": "admin"
+    }
+  ],
+  "guides": [
+    {
+      "id": 1,
+      "project_id": 1,
+      "title": "ATXP Agent Onboarding Guide",
+      "description": "Complete guide for integrating ATXP agents into your development workflow",
+      "personas": ["Developer", "Business Owner"],
+      "created_at": "2025-09-01T16:13:40.046Z",
+      "updated_at": "2025-09-01T16:13:40.046Z"
+    },
+    {
+      "id": 2,
+      "project_id": 1,
+      "title": "ATXP MCP Server Monetization Guide",
+      "description": "Learn how to monetize your MCP servers using ATXP payment infrastructure",
+      "personas": ["Developer", "Business Owner"],
+      "created_at": "2025-09-01T16:13:40.046Z",
+      "updated_at": "2025-09-01T16:13:40.046Z"
+    }
+  ],
+  "flow_boxes": [
+    {
+      "id": 4,
+      "guide_id": 1,
+      "title": "Understanding ATXP",
+      "steps_count": 2
+    },
+    {
+      "id": 5,
+      "guide_id": 1,
+      "title": "Environment Setup",
+      "steps_count": 2
+    },
+    {
+      "id": 6,
+      "guide_id": 1,
+      "title": "Account Configuration",
+      "steps_count": 4
+    },
+    {
+      "id": 7,
+      "guide_id": 1,
+      "title": "Service Definition and Client Creation",
+      "steps_count": 2
+    },
+    {
+      "id": 8,
+      "guide_id": 1,
+      "title": "Implementation and Testing",
+      "steps_count": 3
+    },
+    {
+      "id": 9,
+      "guide_id": 1,
+      "title": "Advanced Features and Next Steps",
+      "steps_count": 3
+    },
+    {
+      "id": 10,
+      "guide_id": 2,
+      "title": "Understanding MCP Server Monetization",
+      "steps_count": 2
+    },
+    {
+      "id": 11,
+      "guide_id": 2,
+      "title": "Environment Setup",
+      "steps_count": 3
+    },
+    {
+      "id": 12,
+      "guide_id": 2,
+      "title": "Wallet Setup and Configuration",
+      "steps_count": 2
+    },
+    {
+      "id": 13,
+      "guide_id": 2,
+      "title": "Basic MCP Server Implementation",
+      "steps_count": 4
+    },
+    {
+      "id": 14,
+      "guide_id": 2,
+      "title": "ATXP Payment Integration",
+      "steps_count": 4
+    },
+    {
+      "id": 15,
+      "guide_id": 2,
+      "title": "Local Testing and Development",
+      "steps_count": 4
+    },
+    {
+      "id": 16,
+      "guide_id": 2,
+      "title": "Advanced Features and Production",
+      "steps_count": 4
+    }
+  ],
+  "steps_sample": [
+    {
+      "id": 4,
+      "title": "ATXP Core Benefits",
+      "flow_box_id": 4,
+      "flow_box_title": "Understanding ATXP",
+      "guide_title": "ATXP Agent Onboarding Guide"
+    },
+    {
+      "id": 5,
+      "title": "Understand MCP (Model Context Protocol)",
+      "flow_box_id": 4,
+      "flow_box_title": "Understanding ATXP",
+      "guide_title": "ATXP Agent Onboarding Guide"
+    },
+    {
+      "id": 6,
+      "title": " Install Required Dependencies",
+      "flow_box_id": 5,
+      "flow_box_title": "Environment Setup",
+      "guide_title": "ATXP Agent Onboarding Guide"
+    },
+    {
+      "id": 7,
+      "title": "Create Project Structure",
+      "flow_box_id": 5,
+      "flow_box_title": "Environment Setup",
+      "guide_title": "ATXP Agent Onboarding Guide"
+    },
+    {
+      "id": 8,
+      "title": "Choose your ATXP Account Type",
+      "flow_box_id": 6,
+      "flow_box_title": "Account Configuration",
+      "guide_title": "ATXP Agent Onboarding Guide"
+    }
+  ],
+  "summary": {
+    "total_users": 3,
+    "platform_admins": 2,
+    "regular_users": 1,
+    "total_projects": 2,
+    "total_guides": 2,
+    "total_flow_boxes": 13,
+    "total_steps": 39,
+    "project_members": 2
+  }
+}
