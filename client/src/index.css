@@ -9,7 +9,7 @@
   --card-foreground: hsl(215, 20%, 15%);
   --popover: hsl(0, 0%, 100%);
   --popover-foreground: hsl(215, 20%, 15%);
-  --primary: hsl(217, 91%, 60%);
+  --primary: hsl(142, 76%, 36%);
   --primary-foreground: hsl(0, 0%, 100%);
   --secondary: hsl(215, 16%, 47%);
   --secondary-foreground: hsl(0, 0%, 100%);
@@ -21,7 +21,7 @@
   --destructive-foreground: hsl(0, 0%, 100%);
   --border: hsl(214, 32%, 91%);
   --input: hsl(214, 32%, 91%);
-  --ring: hsl(217, 91%, 60%);
+  --ring: hsl(142, 76%, 36%);
   --radius: 0.5rem;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -34,19 +34,19 @@
   --card-foreground: hsl(0, 0%, 85.0980%);
   --popover: hsl(0, 0%, 0%);
   --popover-foreground: hsl(200, 6.6667%, 91.1765%);
-  --primary: hsl(217, 91%, 60%);
+  --primary: hsl(142, 76%, 36%);
   --primary-foreground: hsl(0, 0%, 100%);
   --secondary: hsl(195, 15.3846%, 94.9020%);
   --secondary-foreground: hsl(210, 25%, 7.8431%);
   --muted: hsl(0, 0%, 9.4118%);
   --muted-foreground: hsl(210, 3.3898%, 46.2745%);
   --accent: hsl(205, 70%, 7.8431%);
-  --accent-foreground: hsl(217, 91%, 60%);
+  --accent-foreground: hsl(142, 76%, 36%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 100%);
   --border: hsl(210, 5.2632%, 14.9020%);
   --input: hsl(207, 27.6596%, 18.4314%);
-  --ring: hsl(217, 91%, 60%);
+  --ring: hsl(142, 76%, 36%);
 }
 
 @layer base {
