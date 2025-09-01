@@ -53,8 +53,8 @@ export default function UserProgress() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">1</div>
-                <p className="text-xs text-muted-foreground">+0% from last month</p>
+                <div className="text-2xl font-bold">0</div>
+                <p className="text-xs text-muted-foreground">No data available</p>
               </CardContent>
             </Card>
             
@@ -64,8 +64,8 @@ export default function UserProgress() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">75%</div>
-                <p className="text-xs text-muted-foreground">+5% from last week</p>
+                <div className="text-2xl font-bold">0%</div>
+                <p className="text-xs text-muted-foreground">No data available</p>
               </CardContent>
             </Card>
             
@@ -75,8 +75,8 @@ export default function UserProgress() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">45m</div>
-                <p className="text-xs text-muted-foreground">-10% from last week</p>
+                <div className="text-2xl font-bold">0m</div>
+                <p className="text-xs text-muted-foreground">No data available</p>
               </CardContent>
             </Card>
             
@@ -87,7 +87,7 @@ export default function UserProgress() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground">+0 this week</p>
+                <p className="text-xs text-muted-foreground">No data available</p>
               </CardContent>
             </Card>
           </div>
