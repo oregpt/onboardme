@@ -84,6 +84,12 @@ export default function MarkdownImport() {
     const flowBoxes: ParsedFlowBox[] = [];
     const lines = content.split('\n');
     
+    // Check if this is CSV format
+    if (lines[0] && lines[0].includes('Flow Name,Flow Description,Step Title,Content')) {
+      return parseCSVContent(content);
+    }
+    
+    // Original markdown parsing logic
     let currentFlowBox: ParsedFlowBox | null = null;
     let currentStep: ParsedStep | null = null;
     let contentLines: string[] = [];
@@ -153,6 +159,49 @@ export default function MarkdownImport() {
     }
     
     return flowBoxes;
+  };
+
+  const parseCSVContent = (content: string): ParsedFlowBox[] => {
+    const flowBoxes: ParsedFlowBox[] = [];
+    const lines = content.split('\n');
+    
+    // Skip header row
+    let currentFlowBoxMap = new Map<string, ParsedFlowBox>();
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Parse CSV line (basic parsing - may need enhancement for complex CSV)
+      const parts = line.split('","');
+      if (parts.length >= 4) {
+        // Clean up quotes from CSV parsing
+        const flowName = parts[0].replace(/^"/, '').trim();
+        const flowDescription = parts[1].replace(/"/g, '').trim();
+        const stepTitle = parts[2].replace(/"/g, '').trim();
+        const stepContent = parts[3].replace(/"$/, '').replace(/"/g, '').trim();
+        
+        // Get or create flow box
+        if (!currentFlowBoxMap.has(flowName)) {
+          currentFlowBoxMap.set(flowName, {
+            title: flowName,
+            description: flowDescription,
+            steps: []
+          });
+        }
+        
+        const flowBox = currentFlowBoxMap.get(flowName)!;
+        
+        // Add step to flow box
+        flowBox.steps.push({
+          title: stepTitle,
+          content: stepContent
+        });
+      }
+    }
+    
+    // Convert map to array
+    return Array.from(currentFlowBoxMap.values());
   };
 
   const handlePreview = async () => {
