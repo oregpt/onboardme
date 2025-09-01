@@ -10,7 +10,8 @@ import {
   MessageCircle, 
   Database,
   LogOut,
-  User
+  User,
+  Settings
 } from "lucide-react";
 
 export function Sidebar() {
@@ -28,6 +29,7 @@ export function Sidebar() {
     { href: "/users", icon: Users, label: "User Progress" },
     { href: "/qa", icon: MessageCircle, label: "Q&A Analytics" },
     { href: "/knowledge", icon: Database, label: "Knowledge Base" },
+    { href: "/admin/1", icon: Settings, label: "Admin" },
   ];
 
   return (
@@ -47,7 +49,8 @@ export function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const isActive = location === item.href || 
-                         (item.href === "/editor" && location.startsWith("/editor"));
+                         (item.href === "/editor" && location.startsWith("/editor")) ||
+                         (item.href === "/admin/1" && location.startsWith("/admin"));
           
           return (
             <Link key={item.href} href={item.href}>
