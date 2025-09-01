@@ -243,11 +243,31 @@ export class DatabaseStorage implements IStorage {
   async markFlowBoxComplete(userId: string, guideId: number, flowBoxId: number): Promise<void> {
     const progress = await this.getUserProgress(userId, guideId);
     const completedFlowBoxes = (progress?.completedFlowBoxes as number[]) || [];
+    const completedSteps = (progress?.completedSteps as number[]) || [];
     
     if (!completedFlowBoxes.includes(flowBoxId)) {
+      // Get all steps in this flow box
+      const flowBoxSteps = await this.getStepsByFlowBox(flowBoxId);
+      
+      // Add all steps from this flow box to completed steps
+      const newCompletedSteps = [...completedSteps];
+      let hasNewSteps = false;
+      
+      flowBoxSteps.forEach(step => {
+        if (!newCompletedSteps.includes(step.id)) {
+          newCompletedSteps.push(step.id);
+          hasNewSteps = true;
+        }
+      });
+      
+      // Mark flow box as complete
       completedFlowBoxes.push(flowBoxId);
+      
+      // Update progress with both completed flow box and all its steps
       await this.updateUserProgress(userId, guideId, { 
-        completedFlowBoxes: completedFlowBoxes 
+        completedFlowBoxes: completedFlowBoxes,
+        completedSteps: newCompletedSteps,
+        currentStep: flowBoxSteps[flowBoxSteps.length - 1]?.id // Set current step to last step in flow
       });
     }
   }

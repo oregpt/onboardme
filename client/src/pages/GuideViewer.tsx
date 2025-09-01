@@ -116,6 +116,23 @@ export default function GuideViewer() {
     }
   };
 
+  const handleFlowComplete = (flowBoxId: number) => {
+    if (isAuthenticated) {
+      markFlowBoxCompleteMutation.mutate(flowBoxId);
+      toast({
+        title: "Flow marked complete",
+        description: "All steps in this flow have been marked as complete",
+        variant: "default",
+      });
+    } else {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to track your progress",
+        variant: "default",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -217,6 +234,17 @@ export default function GuideViewer() {
                           <Badge variant="outline">
                             {completedBoxSteps}/{boxSteps.length} steps
                           </Badge>
+                          {!isBoxCompleted && isAuthenticated && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleFlowComplete(flowBox.id)}
+                              disabled={markFlowBoxCompleteMutation.isPending}
+                              data-testid={`button-complete-flow-${flowBox.id}`}
+                            >
+                              {markFlowBoxCompleteMutation.isPending ? "Marking..." : "Mark Flow Complete"}
+                            </Button>
+                          )}
                           {isBoxCompleted && (
                             <CheckCircle className="w-5 h-5 text-primary" />
                           )}
