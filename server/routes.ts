@@ -200,6 +200,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerId: userId,
       });
       
+      // Automatically add the creator as an admin member of the project
+      await storage.addProjectMember(project.id, userId, 'admin');
+      
       res.json(project);
     } catch (error) {
       console.error("Error creating project:", error);
