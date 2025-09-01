@@ -18,23 +18,13 @@ import {
 import { useProjectContext } from "@/components/AppLayout";
 
 export default function Dashboard() {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId } = useProjectContext();
 
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
-
-  // Get user's projects to determine role
-  const { data: projects } = useQuery<Array<{id: number, userRole: string}>>({
-    queryKey: ["/api/projects"], 
-    enabled: isAuthenticated
-  });
-
-  // For now, use the first project's role (can be enhanced for multi-project context)
-  const userRole = projects?.[0]?.userRole || 'user';
-  const canCreateGuides = userRole === 'admin' || userRole === 'creator';
 
   // Filter guides by selected project
   const guides = useMemo(() => {
@@ -77,7 +67,7 @@ export default function Dashboard() {
             <div>
               <h2 className="text-2xl font-bold text-foreground">Dashboard</h2>
               <p className="text-muted-foreground mt-1">
-                Welcome back, {(user as any)?.firstName || (user as any)?.email}
+                Welcome back, {user?.firstName || user?.email}
               </p>
             </div>
             <div className="flex gap-2">
@@ -87,14 +77,12 @@ export default function Dashboard() {
                   Admin
                 </Button>
               </Link>
-              {canCreateGuides && (
-                <Link href="/editor">
-                  <Button data-testid="button-create-guide">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Guide
-                  </Button>
-                </Link>
-              )}
+              <Link href="/editor">
+                <Button data-testid="button-create-guide">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Guide
+                </Button>
+              </Link>
             </div>
           </div>
         </header>
@@ -182,7 +170,7 @@ export default function Dashboard() {
                         </p>
                         <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
                           <span>Slug: /{guide.slug}</span>
-                          <span>Created: {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'Unknown'}</span>
+                          <span>Created: {new Date(guide.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
                       
@@ -226,16 +214,14 @@ export default function Dashboard() {
                   <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold text-foreground mb-2">No guides yet</h3>
                   <p className="text-muted-foreground mb-4">
-                    {canCreateGuides ? 'Create your first onboarding guide to get started' : 'No guides available in your current project'}
+                    Create your first onboarding guide to get started
                   </p>
-                  {canCreateGuides && (
-                    <Link href="/editor">
-                      <Button data-testid="button-create-first-guide">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Your First Guide
-                      </Button>
-                    </Link>
-                  )}
+                  <Link href="/editor">
+                    <Button data-testid="button-create-first-guide">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Your First Guide
+                    </Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
