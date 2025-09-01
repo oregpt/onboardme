@@ -239,90 +239,115 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
               className="flow-node bg-accent border border-border rounded-lg p-6"
               data-testid={`flowbox-${flowBox.id}`}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="drag-handle p-1 rounded hover:bg-muted cursor-grab">
-                    <GripVertical className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    flowBox.isVisible 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    {editingBox === flowBox.id ? (
-                      <div className="space-y-2">
-                        <Input
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          placeholder="Flow box title"
-                          className="font-semibold"
-                          data-testid={`input-flowbox-title-${flowBox.id}`}
-                        />
-                        <Textarea
-                          value={editingDescription}
-                          onChange={(e) => setEditingDescription(e.target.value)}
-                          placeholder="Flow box description"
-                          className="text-sm resize-none"
-                          rows={2}
-                          data-testid={`textarea-flowbox-description-${flowBox.id}`}
-                        />
-                        <Textarea
-                          value={editingAgentInstructions}
-                          onChange={(e) => setEditingAgentInstructions(e.target.value)}
-                          placeholder="Agent Instructions (Optional) - Custom AI behavior for this flow"
-                          className="text-sm resize-none"
-                          rows={3}
-                          data-testid={`textarea-flowbox-agent-instructions-${flowBox.id}`}
-                        />
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            onClick={() => saveEdit(flowBox.id)}
-                            data-testid={`button-save-flowbox-${flowBox.id}`}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEditing}
-                            data-testid={`button-cancel-flowbox-${flowBox.id}`}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
+              {editingBox === flowBox.id ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="drag-handle p-1 rounded hover:bg-muted cursor-grab">
+                        <GripVertical className="w-4 h-4 text-muted-foreground" />
                       </div>
-                    ) : (
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                        flowBox.isVisible 
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">Editing Flow Box</span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => saveEdit(flowBox.id)}
+                        data-testid={`button-save-flowbox-${flowBox.id}`}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={cancelEditing}
+                        data-testid={`button-cancel-flowbox-${flowBox.id}`}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Title</label>
+                      <Input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        placeholder="Flow box title"
+                        className="font-semibold"
+                        data-testid={`input-flowbox-title-${flowBox.id}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
+                      <Textarea
+                        value={editingDescription}
+                        onChange={(e) => setEditingDescription(e.target.value)}
+                        placeholder="Flow box description"
+                        className="text-sm resize-none"
+                        rows={2}
+                        data-testid={`textarea-flowbox-description-${flowBox.id}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Agent Instructions (Optional)</label>
+                      <Textarea
+                        value={editingAgentInstructions}
+                        onChange={(e) => setEditingAgentInstructions(e.target.value)}
+                        placeholder="Custom AI behavior for this flow - These instructions will be used by the AI when answering questions about steps in this flow"
+                        className="text-sm resize-none"
+                        rows={3}
+                        data-testid={`textarea-flowbox-agent-instructions-${flowBox.id}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="drag-handle p-1 rounded hover:bg-muted cursor-grab">
+                      <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      flowBox.isVisible 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <div>
                         <h4 className="font-semibold text-foreground">{flowBox.title}</h4>
                         <p className="text-sm text-muted-foreground">{flowBox.description}</p>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline">{boxSteps.length} steps</Badge>
-                  <div className="w-4 h-4 bg-ring rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-3 h-3 text-white" />
-                  </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" data-testid={`button-flowbox-menu-${flowBox.id}`}>
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => startEditing(flowBox)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => toggleBoxVisibility(flowBox.id, flowBox.isVisible)}
-                      >
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline">{boxSteps.length} steps</Badge>
+                    <div className="w-4 h-4 bg-ring rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-3 h-3 text-white" />
+                    </div>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" data-testid={`button-flowbox-menu-${flowBox.id}`}>
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => startEditing(flowBox)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => toggleBoxVisibility(flowBox.id, flowBox.isVisible || false)}
+                        >
                         {flowBox.isVisible ? (
                           <>
                             <EyeOff className="w-4 h-4 mr-2" />
@@ -344,8 +369,9 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Steps within Flow Box */}
               <div className="ml-11 space-y-3">
@@ -366,26 +392,26 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                         </p>
                       )}
                       <div className="mt-2 flex items-center space-x-2 flex-wrap gap-1">
-                        {step.attachments && (step.attachments as any[]).length > 0 && (
+                        {step.attachments && Array.isArray(step.attachments) && step.attachments.length > 0 && (
                           <>
-                            {(step.attachments as any[]).filter(att => att.category === 'general').length > 0 && (
+                            {(step.attachments as any[]).filter((att: any) => att.category === 'general').length > 0 && (
                               <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
-                                📁 {(step.attachments as any[]).filter(att => att.category === 'general').length} General
+                                📁 {(step.attachments as any[]).filter((att: any) => att.category === 'general').length} General
                               </Badge>
                             )}
-                            {(step.attachments as any[]).filter(att => att.category === 'faq').length > 0 && (
+                            {(step.attachments as any[]).filter((att: any) => att.category === 'faq').length > 0 && (
                               <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                                📋 {(step.attachments as any[]).filter(att => att.category === 'faq').length} FAQ
+                                📋 {(step.attachments as any[]).filter((att: any) => att.category === 'faq').length} FAQ
                               </Badge>
                             )}
-                            {(step.attachments as any[]).filter(att => att.category === 'other-help').length > 0 && (
+                            {(step.attachments as any[]).filter((att: any) => att.category === 'other-help').length > 0 && (
                               <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                🛠️ {(step.attachments as any[]).filter(att => att.category === 'other-help').length} Help
+                                🛠️ {(step.attachments as any[]).filter((att: any) => att.category === 'other-help').length} Help
                               </Badge>
                             )}
-                            {(step.attachments as any[]).filter(att => !att.category).length > 0 && (
+                            {(step.attachments as any[]).filter((att: any) => !att.category).length > 0 && (
                               <Badge variant="secondary" className="text-xs">
-                                📎 {(step.attachments as any[]).filter(att => !att.category).length} Legacy
+                                📎 {(step.attachments as any[]).filter((att: any) => !att.category).length} Legacy
                               </Badge>
                             )}
                           </>
