@@ -9,6 +9,7 @@ import {
   projects,
   projectMembers,
   conversationHistory,
+  stepComments,
   type User,
   type UpsertUser,
   type Project,
@@ -29,6 +30,8 @@ import {
   type InsertKnowledgeBase,
   type ConversationHistory,
   type InsertConversationHistory,
+  type StepComment,
+  type InsertStepComment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc } from "drizzle-orm";
@@ -94,6 +97,12 @@ export interface IStorage {
   // Conversation history operations
   storeConversationMessage(message: InsertConversationHistory): Promise<ConversationHistory>;
   getConversationHistory(projectId: number, conversationId?: string): Promise<ConversationHistory[]>;
+  
+  // Step comment operations
+  createStepComment(comment: InsertStepComment): Promise<StepComment>;
+  getStepComments(stepId: number): Promise<StepComment[]>;
+  updateStepComment(id: number, updates: Partial<InsertStepComment>): Promise<StepComment | undefined>;
+  deleteStepComment(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -498,6 +507,34 @@ export class DatabaseStorage implements IStorage {
       .from(conversationHistory)
       .where(and(...conditions))
       .orderBy(asc(conversationHistory.createdAt));
+  }
+
+  // Step comment operations
+  async createStepComment(comment: InsertStepComment): Promise<StepComment> {
+    const [newComment] = await db.insert(stepComments).values(comment).returning();
+    return newComment;
+  }
+
+  async getStepComments(stepId: number): Promise<StepComment[]> {
+    return await db
+      .select()
+      .from(stepComments)
+      .where(eq(stepComments.stepId, stepId))
+      .orderBy(desc(stepComments.createdAt));
+  }
+
+  async updateStepComment(id: number, updates: Partial<InsertStepComment>): Promise<StepComment | undefined> {
+    const [updatedComment] = await db
+      .update(stepComments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(stepComments.id, id))
+      .returning();
+    return updatedComment;
+  }
+
+  async deleteStepComment(id: number): Promise<boolean> {
+    const result = await db.delete(stepComments).where(eq(stepComments.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

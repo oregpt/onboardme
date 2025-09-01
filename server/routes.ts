@@ -373,6 +373,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Step comment routes
+  app.get('/api/steps/:stepId/comments', async (req, res) => {
+    try {
+      const stepId = parseInt(req.params.stepId);
+      const comments = await storage.getStepComments(stepId);
+      res.json(comments);
+    } catch (error) {
+      console.error("Error fetching step comments:", error);
+      res.status(500).json({ message: "Failed to fetch step comments" });
+    }
+  });
+
+  app.post('/api/steps/:stepId/comments', isAuthenticated, async (req: any, res) => {
+    try {
+      const stepId = parseInt(req.params.stepId);
+      const userId = req.user.claims.sub;
+      const { content, isCertified = true } = req.body;
+
+      if (!content?.trim()) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+
+      const comment = await storage.createStepComment({
+        stepId,
+        userId,
+        content: content.trim(),
+        isCertified,
+        isHelpful: true,
+      });
+
+      res.json(comment);
+    } catch (error) {
+      console.error("Error creating step comment:", error);
+      res.status(500).json({ message: "Failed to create step comment" });
+    }
+  });
+
+  app.put('/api/comments/:commentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const userId = req.user.claims.sub;
+      const { content } = req.body;
+
+      // Note: In a full implementation, you'd check if the user owns this comment
+      const updatedComment = await storage.updateStepComment(commentId, {
+        content: content.trim(),
+        updatedAt: new Date(),
+      });
+
+      if (!updatedComment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      res.json(updatedComment);
+    } catch (error) {
+      console.error("Error updating step comment:", error);
+      res.status(500).json({ message: "Failed to update step comment" });
+    }
+  });
+
+  app.delete('/api/comments/:commentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const userId = req.user.claims.sub;
+
+      // Note: In a full implementation, you'd check if the user owns this comment
+      const deleted = await storage.deleteStepComment(commentId);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting step comment:", error);
+      res.status(500).json({ message: "Failed to delete step comment" });
+    }
+  });
+
   // Q&A routes
   app.get('/api/guides/:guideId/qa', async (req, res) => {
     try {

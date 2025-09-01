@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ProgressTracker } from "@/components/ProgressTracker";
 import { AIChat } from "@/components/AIChat";
+import StepComments from "@/components/StepComments";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -485,6 +486,11 @@ export default function GuideViewer() {
                                     )}
                                   </div>
                                 )}
+                                
+                                {/* Step Comments/Tips */}
+                                <div className="mt-4 border-t border-border pt-4">
+                                  <StepComments stepId={step.id} />
+                                </div>
                               </div>
                             </div>
                           );

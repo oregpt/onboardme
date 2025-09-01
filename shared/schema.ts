@@ -155,6 +155,18 @@ export const knowledgeBase = pgTable("knowledge_base", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Step comments for peer assistance
+export const stepComments = pgTable("step_comments", {
+  id: serial("id").primaryKey(),
+  stepId: integer("step_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  content: text("content").notNull(),
+  isHelpful: boolean("is_helpful").default(true),
+  isCertified: boolean("is_certified").default(true), // User certified this is helpful
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   owner: one(users, {
@@ -203,6 +215,18 @@ export const stepsRelations = relations(steps, ({ one, many }) => ({
     references: [flowBoxes.id],
   }),
   qaConversations: many(qaConversations),
+  comments: many(stepComments),
+}));
+
+export const stepCommentsRelations = relations(stepComments, ({ one }) => ({
+  step: one(steps, {
+    fields: [stepComments.stepId],
+    references: [steps.id],
+  }),
+  user: one(users, {
+    fields: [stepComments.userId],
+    references: [users.id],
+  }),
 }));
 
 export const userProgressRelations = relations(userProgress, ({ one }) => ({
@@ -269,6 +293,9 @@ export type InsertKnowledgeBase = typeof knowledgeBase.$inferInsert;
 
 export type ConversationHistory = typeof conversationHistory.$inferSelect;
 export type InsertConversationHistory = typeof conversationHistory.$inferInsert;
+
+export type StepComment = typeof stepComments.$inferSelect;
+export type InsertStepComment = typeof stepComments.$inferInsert;
 
 // Validation schemas
 export const insertProjectSchema = createInsertSchema(projects);
