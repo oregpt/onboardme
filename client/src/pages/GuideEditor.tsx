@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -141,7 +141,9 @@ export default function GuideEditor() {
                 {isEditing ? "Edit Guide" : "Create Guide"}
               </h2>
               <nav className="flex items-center space-x-2 text-sm text-muted-foreground mt-1">
-                <span>Guides</span>
+                <Link href="/guides" className="hover:text-foreground transition-colors">
+                  <span>Guides</span>
+                </Link>
                 <ChevronRight className="w-4 h-4" />
                 <span>{guideData.title || "New Guide"}</span>
                 <ChevronRight className="w-4 h-4" />

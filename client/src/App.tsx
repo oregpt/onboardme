@@ -9,6 +9,8 @@ import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import GuideEditor from "@/pages/GuideEditor";
 import GuideViewer from "@/pages/GuideViewer";
+import Guides from "@/pages/Guides";
+import UserProgress from "@/pages/UserProgress";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,6 +34,8 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/guides" component={Guides} />
+          <Route path="/users" component={UserProgress} />
           <Route path="/editor" component={GuideEditor} />
           <Route path="/editor/:id" component={GuideEditor} />
           <Route path="/guide/:slug" component={GuideViewer} />
