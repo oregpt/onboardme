@@ -42,7 +42,7 @@ export function parseCSV(csvContent: string): CSVRow[] {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Simple CSV parsing - handles quoted fields with commas
+    // Enhanced CSV parsing - handles quoted fields with commas and preserves markdown formatting
     const fields: string[] = [];
     let currentField = '';
     let inQuotes = false;
@@ -64,11 +64,21 @@ export function parseCSV(csvContent: string): CSVRow[] {
     fields.push(currentField.trim().replace(/^"|"$/g, ''));
     
     if (fields.length >= 4) {
+      // Convert content to proper markdown format
+      const content = fields[3]
+        .replace(/\\n/g, '\n')  // Convert \n to actual line breaks
+        .replace(/```bash/g, '\n```bash')  // Ensure code blocks have proper spacing
+        .replace(/```typescript/g, '\n```typescript')
+        .replace(/```/g, '\n```\n')  // Add spacing around code blocks
+        .replace(/(\n\s*-\s)/g, '\n- ')  // Clean up list formatting
+        .replace(/(\n\s*\d+\.\s)/g, '\n$1')  // Clean up numbered lists
+        .trim();
+
       rows.push({
         "Flow Name": fields[0],
         "Flow Description": fields[1],
         "Step Title": fields[2],
-        "Content": fields[3]
+        "Content": content
       });
     }
   }
