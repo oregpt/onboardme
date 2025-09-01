@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/AppLayout";
 import NotFound from "@/pages/not-found";
 import SimpleLanding from "@/pages/SimpleLanding";
 import Dashboard from "@/pages/Dashboard";
@@ -33,17 +34,19 @@ function Router() {
           <Route component={NotFound} />
         </>
       ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/project/:projectId" component={Admin} />
-          <Route path="/guides" component={Guides} />
-          <Route path="/users" component={UserProgress} />
-          <Route path="/admin/:projectId" component={Admin} />
-          <Route path="/editor" component={GuideEditor} />
-          <Route path="/editor/:id" component={GuideEditor} />
-          <Route path="/guide/:slug" component={GuideViewer} />
-          <Route component={NotFound} />
-        </>
+        <AppLayout>
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/project/:projectId" component={Admin} />
+            <Route path="/guides" component={Guides} />
+            <Route path="/users" component={UserProgress} />
+            <Route path="/admin/:projectId" component={Admin} />
+            <Route path="/editor" component={GuideEditor} />
+            <Route path="/editor/:id" component={GuideEditor} />
+            <Route path="/guide/:slug" component={GuideViewer} />
+            <Route component={NotFound} />
+          </Switch>
+        </AppLayout>
       )}
     </Switch>
   );
