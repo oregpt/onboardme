@@ -356,6 +356,11 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                       <div className="mt-2 flex items-center space-x-2 flex-wrap gap-1">
                         {step.attachments && (step.attachments as any[]).length > 0 && (
                           <>
+                            {(step.attachments as any[]).filter(att => att.category === 'general').length > 0 && (
+                              <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                📁 {(step.attachments as any[]).filter(att => att.category === 'general').length} General
+                              </Badge>
+                            )}
                             {(step.attachments as any[]).filter(att => att.category === 'faq').length > 0 && (
                               <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
                                 📋 {(step.attachments as any[]).filter(att => att.category === 'faq').length} FAQ
@@ -368,7 +373,7 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                             )}
                             {(step.attachments as any[]).filter(att => !att.category).length > 0 && (
                               <Badge variant="secondary" className="text-xs">
-                                📎 {(step.attachments as any[]).filter(att => !att.category).length} Files
+                                📎 {(step.attachments as any[]).filter(att => !att.category).length} Legacy
                               </Badge>
                             )}
                           </>

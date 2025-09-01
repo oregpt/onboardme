@@ -71,7 +71,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
   };
 
   // Attachment handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, category: 'faq' | 'other-help') => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, category: 'general' | 'faq' | 'other-help') => {
     const files = e.target.files;
     if (!files) return;
 
@@ -300,6 +300,81 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
               <p className="text-xs text-muted-foreground">
                 Content variations for different personas will be available in a future update.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* General Attachments */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center">
+                <span className="mr-2">📁</span>
+                General Files
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* General Upload Button */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="file"
+                  id="general-upload"
+                  multiple
+                  onChange={(e) => handleFileSelect(e, 'general')}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('general-upload')?.click()}
+                  data-testid="button-upload-general"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload General Files
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  PDF, DOC, TXT, Images
+                </span>
+              </div>
+
+              {/* General Attachment List */}
+              {stepData.attachments.filter((att: any) => att.category === 'general').length > 0 && (
+                <div className="space-y-2">
+                  {stepData.attachments.filter((att: any) => att.category === 'general').map((attachment: any) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-2 border border-border rounded-md bg-gray-50 dark:bg-gray-950/30"
+                      data-testid={`general-attachment-${attachment.id}`}
+                    >
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <Paperclip className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {attachment.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.size)} • General
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-remove-general-${attachment.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {stepData.attachments.filter((att: any) => att.category === 'general').length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No general files added yet. Upload general documentation and resources.
+                </p>
+              )}
             </CardContent>
           </Card>
 

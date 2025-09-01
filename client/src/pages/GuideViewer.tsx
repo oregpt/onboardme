@@ -324,6 +324,30 @@ export default function GuideViewer() {
                                 
                                 {step.attachments && (step.attachments as any[]).length > 0 && (
                                   <div className="mt-3 space-y-3">
+                                    {/* General Attachments */}
+                                    {(step.attachments as any[]).filter(att => att.category === 'general').length > 0 && (
+                                      <div>
+                                        <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                                          📁 General Files
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                          {(step.attachments as any[]).filter(att => att.category === 'general').map((attachment, idx) => (
+                                            <Button
+                                              key={`general-${idx}`}
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => downloadAttachment(attachment)}
+                                              className="h-6 px-2 text-xs flex items-center gap-1 border-gray-200 text-gray-700 hover:bg-gray-50"
+                                              data-testid={`button-download-general-${idx}`}
+                                            >
+                                              <Download className="w-3 h-3" />
+                                              {attachment.name || attachment.type}
+                                            </Button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    
                                     {/* FAQ Attachments */}
                                     {(step.attachments as any[]).filter(att => att.category === 'faq').length > 0 && (
                                       <div>
@@ -376,7 +400,7 @@ export default function GuideViewer() {
                                     {(step.attachments as any[]).filter(att => !att.category).length > 0 && (
                                       <div>
                                         <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                                          📎 Files
+                                          📎 Legacy Files
                                         </h4>
                                         <div className="flex flex-wrap gap-2">
                                           {(step.attachments as any[]).filter(att => !att.category).map((attachment, idx) => (
