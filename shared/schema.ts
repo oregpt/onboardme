@@ -55,6 +55,7 @@ export const flowBoxes = pgTable("flow_boxes", {
   guideId: integer("guide_id").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
+  agentInstructions: text("agent_instructions"), // Optional AI instructions for this flow
   position: integer("position").notNull(), // Order in the flow
   isVisible: boolean("is_visible").default(true),
   createdAt: timestamp("created_at").defaultNow(),
