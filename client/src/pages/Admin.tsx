@@ -195,21 +195,29 @@ export default function Admin() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/">
-            <Button variant="outline" size="sm" data-testid="button-back-home">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="outline" size="sm" data-testid="button-back-home">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground" data-testid="text-admin-title">
+                Project Management
+              </h1>
+              <p className="text-muted-foreground">
+                Manage your projects, settings, and team members
+              </p>
+            </div>
+          </div>
+          <Link href="/admin/database">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Database Management
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground" data-testid="text-admin-title">
-              Project Management
-            </h1>
-            <p className="text-muted-foreground">
-              Manage your projects, settings, and team members
-            </p>
-          </div>
         </div>
 
         {/* Main Content */}

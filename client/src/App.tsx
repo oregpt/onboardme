@@ -14,6 +14,7 @@ import GuideViewer from "@/pages/GuideViewer";
 import Guides from "@/pages/Guides";
 import UserProgress from "@/pages/UserProgress";
 import Admin from "@/pages/Admin";
+import DatabaseManagement from "@/pages/DatabaseManagement";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -42,6 +43,7 @@ function Router() {
             <Route path="/guides" component={Guides} />
             <Route path="/users" component={UserProgress} />
             <Route path="/admin/:projectId" component={Admin} />
+            <Route path="/admin/database" component={DatabaseManagement} />
             <Route path="/editor" component={GuideEditor} />
             <Route path="/editor/:id" component={GuideEditor} />
             <Route path="/guide/:slug" component={GuideViewer} />
