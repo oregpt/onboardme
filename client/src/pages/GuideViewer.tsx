@@ -174,9 +174,11 @@ export default function GuideViewer() {
                   <CardTitle>Guide Overview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ReactMarkdown className="prose prose-sm max-w-none">
-                    {guide.globalInformation}
-                  </ReactMarkdown>
+                  <div className="prose prose-sm max-w-none">
+                    <ReactMarkdown>
+                      {guide.globalInformation}
+                    </ReactMarkdown>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -249,8 +251,8 @@ export default function GuideViewer() {
                               <div className="flex-1">
                                 <h4 className="font-medium text-foreground">{step.title}</h4>
                                 {step.content && (
-                                  <div className="mt-2">
-                                    <ReactMarkdown className="prose prose-sm max-w-none">
+                                  <div className="mt-2 prose prose-sm max-w-none">
+                                    <ReactMarkdown>
                                       {step.content}
                                     </ReactMarkdown>
                                   </div>
@@ -309,7 +311,7 @@ export default function GuideViewer() {
                 <div>
                   <span className="text-sm font-medium text-foreground">Created:</span>
                   <span className="ml-2 text-sm text-muted-foreground">
-                    {new Date(guide.createdAt).toLocaleDateString()}
+                    {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'Unknown'}
                   </span>
                 </div>
               </CardContent>
