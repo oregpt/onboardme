@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useRoute } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function GuideViewer() {
   const [, params] = useRoute("/guide/:slug");
+  const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   
@@ -177,7 +178,7 @@ export default function GuideViewer() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => window.history.back()}
+              onClick={() => setLocation("/")}
               data-testid="button-back"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
