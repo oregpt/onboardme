@@ -6,10 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Users, ArrowLeft, Database } from "lucide-react";
+import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2 } from "lucide-react";
 
 interface Project {
   id: number;
@@ -38,7 +43,14 @@ export default function Admin() {
   const [, params] = useRoute("/admin/:projectId");
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("settings");
+  const [activeTab, setActiveTab] = useState("projects");
+  const [showCreateProject, setShowCreateProject] = useState(false);
+  const [showEditProject, setShowEditProject] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDescription, setNewProjectDescription] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("user");
   
   const projectId = params?.projectId ? parseInt(params.projectId) : null;
 
@@ -55,6 +67,12 @@ export default function Admin() {
   });
 
   // Update project settings mutation
+  // Fetch all projects for admin view
+  const { data: allProjects, isLoading: allProjectsLoading } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+    enabled: isAuthenticated,
+  });
+
   const updateProjectMutation = useMutation({
     mutationFn: async (updates: Partial<Project>) => {
       const response = await apiRequest("PUT", `/api/projects/${projectId}`, updates);
@@ -71,6 +89,52 @@ export default function Admin() {
       toast({
         title: "Update Failed",
         description: "Failed to update project settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createProjectMutation = useMutation({
+    mutationFn: async (projectData: { name: string; description: string }) => {
+      return await apiRequest("POST", "/api/projects", projectData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setShowCreateProject(false);
+      setNewProjectName("");
+      setNewProjectDescription("");
+      toast({
+        title: "Project Created",
+        description: "New project has been created successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Creation Failed",
+        description: "Failed to create project. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const addMemberMutation = useMutation({
+    mutationFn: async (memberData: { email: string; role: string }) => {
+      return await apiRequest("POST", `/api/projects/${projectId}/members`, memberData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "members"] });
+      setShowAddMember(false);
+      setNewMemberEmail("");
+      setNewMemberRole("user");
+      toast({
+        title: "Member Added",
+        description: "New member has been added to the project.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Add Failed",
+        description: "Failed to add member. Please try again.",
         variant: "destructive",
       });
     },
@@ -175,7 +239,11 @@ export default function Admin() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="projects" className="flex items-center gap-2" data-testid="tab-projects">
+              <Database className="w-4 h-4" />
+              Projects
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2" data-testid="tab-settings">
               <Settings className="w-4 h-4" />
               Settings
@@ -185,6 +253,114 @@ export default function Admin() {
               Members
             </TabsTrigger>
           </TabsList>
+
+          {/* Projects Tab */}
+          <TabsContent value="projects" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Project Management</CardTitle>
+                  <Dialog open={showCreateProject} onOpenChange={setShowCreateProject}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="button-create-project">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Project
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Create New Project</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div>
+                          <Label htmlFor="project-name">Project Name</Label>
+                          <Input
+                            id="project-name"
+                            value={newProjectName}
+                            onChange={(e) => setNewProjectName(e.target.value)}
+                            placeholder="Enter project name"
+                            data-testid="input-project-name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="project-description">Description</Label>
+                          <Textarea
+                            id="project-description"
+                            value={newProjectDescription}
+                            onChange={(e) => setNewProjectDescription(e.target.value)}
+                            placeholder="Enter project description"
+                            data-testid="textarea-project-description"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowCreateProject(false)}
+                            data-testid="button-cancel-create"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={() => createProjectMutation.mutate({ name: newProjectName, description: newProjectDescription })}
+                            disabled={!newProjectName || createProjectMutation.isPending}
+                            data-testid="button-submit-create"
+                          >
+                            Create Project
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {allProjectsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading projects...</p>
+                  </div>
+                ) : allProjects && allProjects.length > 0 ? (
+                  <div className="space-y-4">
+                    {allProjects.map((proj) => (
+                      <div
+                        key={proj.id}
+                        className="flex items-center justify-between p-4 border border-border rounded-lg"
+                        data-testid={`project-${proj.id}`}
+                      >
+                        <div>
+                          <h3 className="font-medium" data-testid={`project-name-${proj.id}`}>
+                            {proj.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {proj.description || 'No description'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Created {new Date(proj.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={proj.isActive ? 'default' : 'secondary'}>
+                            {proj.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                          <Link href={`/admin/${proj.id}`}>
+                            <Button variant="outline" size="sm" data-testid={`button-edit-project-${proj.id}`}>
+                              <Edit className="w-4 h-4 mr-1" />
+                              Manage
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8" data-testid="no-projects">
+                    <Database className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No projects found</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
@@ -248,7 +424,66 @@ export default function Admin() {
           <TabsContent value="members" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Project Members</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Project Members</CardTitle>
+                  {isAdmin && (
+                    <Dialog open={showAddMember} onOpenChange={setShowAddMember}>
+                      <DialogTrigger asChild>
+                        <Button data-testid="button-add-member">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Member
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Project Member</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div>
+                            <Label htmlFor="member-email">Email Address</Label>
+                            <Input
+                              id="member-email"
+                              type="email"
+                              value={newMemberEmail}
+                              onChange={(e) => setNewMemberEmail(e.target.value)}
+                              placeholder="Enter user's email"
+                              data-testid="input-member-email"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="member-role">Access Level</Label>
+                            <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                              <SelectTrigger data-testid="select-member-role">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">User - View only access</SelectItem>
+                                <SelectItem value="creator">Creator - Can create and edit content</SelectItem>
+                                <SelectItem value="admin">Admin - Full project access</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowAddMember(false)}
+                              data-testid="button-cancel-add-member"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => addMemberMutation.mutate({ email: newMemberEmail, role: newMemberRole })}
+                              disabled={!newMemberEmail || addMemberMutation.isPending}
+                              data-testid="button-submit-add-member"
+                            >
+                              Add Member
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 {membersLoading ? (

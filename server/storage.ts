@@ -39,6 +39,7 @@ import { eq, and, desc, asc } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Project operations
@@ -50,10 +51,11 @@ export interface IStorage {
   deleteProject(id: number): Promise<boolean>;
   
   // Project member operations
-  addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
+  addProjectMember(projectId: number, userId: string, role: string): Promise<ProjectMember>;
   getProjectMembers(projectId: number): Promise<ProjectMember[]>;
   getUserProjectRole(userId: string, projectId: number): Promise<string | undefined>;
-  removeProjectMember(projectId: number, userId: string): Promise<boolean>;
+  updateProjectMemberRole(memberId: number, role: string): Promise<ProjectMember | undefined>;
+  removeProjectMember(memberId: number): Promise<boolean>;
   
   // Guide operations
   createGuide(guide: InsertGuide): Promise<Guide>;
@@ -109,6 +111,11 @@ export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user;
   }
 
@@ -177,8 +184,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Project member operations
-  async addProjectMember(member: InsertProjectMember): Promise<ProjectMember> {
-    const [newMember] = await db.insert(projectMembers).values(member).returning();
+  async addProjectMember(projectId: number, userId: string, role: string): Promise<ProjectMember> {
+    const [newMember] = await db.insert(projectMembers).values({
+      projectId,
+      userId,
+      role
+    }).returning();
     return newMember;
   }
 
@@ -197,10 +208,19 @@ export class DatabaseStorage implements IStorage {
     return member?.role ?? undefined;
   }
 
-  async removeProjectMember(projectId: number, userId: string): Promise<boolean> {
+  async updateProjectMemberRole(memberId: number, role: string): Promise<ProjectMember | undefined> {
+    const [updatedMember] = await db
+      .update(projectMembers)
+      .set({ role })
+      .where(eq(projectMembers.id, memberId))
+      .returning();
+    return updatedMember;
+  }
+
+  async removeProjectMember(memberId: number): Promise<boolean> {
     const result = await db
       .delete(projectMembers)
-      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)));
+      .where(eq(projectMembers.id, memberId));
     return (result.rowCount ?? 0) > 0;
   }
 

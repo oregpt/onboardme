@@ -80,6 +80,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new project
+  app.post('/api/projects', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { name, description } = req.body;
+      if (!name) {
+        return res.status(400).json({ message: "Project name is required" });
+      }
+      
+      // Generate slug from name
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      
+      const project = await storage.createProject({
+        name,
+        description: description || '',
+        slug,
+        ownerId: userId,
+      });
+      
+      res.json(project);
+    } catch (error) {
+      console.error("Error creating project:", error);
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
   app.get('/api/projects/:id/members', isAuthenticated, async (req: any, res) => {
     try {
       const projectId = parseInt(req.params.id);
@@ -96,6 +123,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching project members:", error);
       res.status(500).json({ message: "Failed to fetch project members" });
+    }
+  });
+
+  // Add member to project
+  app.post('/api/projects/:id/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      // Check if user is admin
+      const role = await storage.getUserProjectRole(userId, projectId);
+      if (role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { email, role: memberRole } = req.body;
+      if (!email || !memberRole) {
+        return res.status(400).json({ message: "Email and role are required" });
+      }
+      
+      // Find user by email
+      const targetUser = await storage.getUserByEmail(email);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const member = await storage.addProjectMember(projectId, targetUser.id, memberRole);
+      res.json(member);
+    } catch (error) {
+      console.error("Error adding project member:", error);
+      res.status(500).json({ message: "Failed to add project member" });
+    }
+  });
+
+  // Update member role
+  app.put('/api/projects/:id/members/:memberId', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const memberId = parseInt(req.params.memberId);
+      const userId = req.user.claims.sub;
+      
+      // Check if user is admin
+      const role = await storage.getUserProjectRole(userId, projectId);
+      if (role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { role: newRole } = req.body;
+      if (!newRole) {
+        return res.status(400).json({ message: "Role is required" });
+      }
+      
+      const updatedMember = await storage.updateProjectMemberRole(memberId, newRole);
+      res.json(updatedMember);
+    } catch (error) {
+      console.error("Error updating member role:", error);
+      res.status(500).json({ message: "Failed to update member role" });
+    }
+  });
+
+  // Remove member from project
+  app.delete('/api/projects/:id/members/:memberId', isAuthenticated, async (req: any, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      const memberId = parseInt(req.params.memberId);
+      const userId = req.user.claims.sub;
+      
+      // Check if user is admin
+      const role = await storage.getUserProjectRole(userId, projectId);
+      if (role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      await storage.removeProjectMember(memberId);
+      res.json({ message: "Member removed successfully" });
+    } catch (error) {
+      console.error("Error removing project member:", error);
+      res.status(500).json({ message: "Failed to remove project member" });
     }
   });
 
