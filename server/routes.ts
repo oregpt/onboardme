@@ -22,6 +22,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Onboarding flow handler
+  app.get('/api/onboarding-flow', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const flow = (req.session as any)?.onboardingFlow;
+
+      // Clear the flow from session
+      delete (req.session as any)?.onboardingFlow;
+
+      if (!flow) {
+        return res.redirect('/');
+      }
+
+      switch (flow) {
+        case 'atxp':
+          // Add user to Project 1 as a user if not already a member
+          try {
+            const existingRole = await storage.getUserProjectRole(userId, 1);
+            if (!existingRole) {
+              await storage.addProjectMember(1, userId, 'user');
+            }
+            return res.redirect('/project/1');
+          } catch (error) {
+            console.error('Error adding user to ATXP project:', error);
+            return res.redirect('/');
+          }
+
+        case 'create':
+          // Create new project with user as admin
+          try {
+            const email = user?.email || `user-${userId}`;
+            const project = await storage.createProject({
+              name: email,
+              description: email,
+              ownerId: userId,
+              slug: `project-${Date.now()}`
+            });
+            await storage.addProjectMember(project.id, userId, 'admin');
+            return res.redirect(`/project/${project.id}`);
+          } catch (error) {
+            console.error('Error creating project for user:', error);
+            return res.redirect('/');
+          }
+
+        case 'other':
+          // Route based on existing access
+          try {
+            const projects = await storage.getProjects(userId);
+            if (projects.length > 0) {
+              // Take them to their first project
+              return res.redirect(`/project/${projects[0].id}`);
+            } else {
+              // No projects, take them to main dashboard
+              return res.redirect('/');
+            }
+          } catch (error) {
+            console.error('Error finding user projects:', error);
+            return res.redirect('/');
+          }
+
+        default:
+          return res.redirect('/');
+      }
+    } catch (error) {
+      console.error('Error in onboarding flow:', error);
+      res.redirect('/');
+    }
+  });
+
   // Project management routes
   app.get('/api/projects', isAuthenticated, async (req: any, res) => {
     try {
@@ -684,9 +754,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Chat endpoint
-  app.post('/api/ai/chat', isAuthenticated, async (req, res) => {
+  app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
     try {
       const { message, provider, guideId, flowBoxId, stepId } = req.body;
+      const userId = req.user.claims.sub;
       
       if (!message || !guideId) {
         return res.status(400).json({ message: "Missing required fields" });

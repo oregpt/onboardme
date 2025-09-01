@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/Landing";
+import SimpleLanding from "@/pages/SimpleLanding";
 import Dashboard from "@/pages/Dashboard";
 import GuideEditor from "@/pages/GuideEditor";
 import GuideViewer from "@/pages/GuideViewer";
@@ -28,13 +28,14 @@ function Router() {
         </Route>
       ) : !isAuthenticated ? (
         <>
-          <Route path="/" component={Landing} />
+          <Route path="/" component={SimpleLanding} />
           <Route path="/guide/:slug" component={GuideViewer} />
           <Route component={NotFound} />
         </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          <Route path="/project/:projectId" component={Admin} />
           <Route path="/guides" component={Guides} />
           <Route path="/users" component={UserProgress} />
           <Route path="/admin/:projectId" component={Admin} />
