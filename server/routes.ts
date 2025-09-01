@@ -458,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let stepsCreated = 0;
 
       // Get the highest position for flow boxes to append new ones
-      const existingFlowBoxes = await storage.getFlowBoxes(guideId);
+      const existingFlowBoxes = await storage.getFlowBoxesByGuide(guideId);
       let maxPosition = Math.max(...existingFlowBoxes.map(fb => fb.position), 0);
 
       // Process each flow box
