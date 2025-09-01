@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Step } from "@shared/schema";
-import { X, Bold, Italic, Code, Link, Save } from "lucide-react";
+import { X, Bold, Italic, Code, Link, Save, GripVertical, Upload, Paperclip } from "lucide-react";
 
 interface StepEditorProps {
   step: Step;
@@ -22,15 +22,96 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
     title: step.title,
     content: step.content || "",
     description: "",
+    attachments: (step.attachments as any[]) || [],
   });
+  const [editorWidth, setEditorWidth] = useState(384); // Starting at w-96 equivalent (24rem = 384px)
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setStepData({
       title: step.title,
       content: step.content || "",
       description: "",
+      attachments: (step.attachments as any[]) || [],
     });
   }, [step]);
+
+  // Handle resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !resizeRef.current) return;
+      
+      const rect = resizeRef.current.getBoundingClientRect();
+      const newWidth = rect.right - e.clientX;
+      const minWidth = 320; // Minimum width
+      const maxWidth = 800; // Maximum width
+      
+      setEditorWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  // Attachment handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newAttachment = {
+          id: Date.now() + Math.random(), // Simple ID generation
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: event.target?.result as string, // Base64 data
+        };
+        
+        setStepData(prev => ({
+          ...prev,
+          attachments: [...prev.attachments, newAttachment]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removeAttachment = (attachmentId: number) => {
+    setStepData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter((att: any) => att.id !== attachmentId)
+    }));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const updateStepMutation = useMutation({
     mutationFn: async (updates: Partial<Step>) => {
@@ -56,18 +137,35 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
     updateStepMutation.mutate({
       title: stepData.title,
       content: stepData.content,
+      attachments: stepData.attachments,
     });
   };
 
-  const insertTextAtCursor = (textarea: HTMLTextAreaElement, text: string) => {
+  const applyFormatting = (textarea: HTMLTextAreaElement, beforeText: string, afterText: string, defaultText?: string) => {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const newContent = stepData.content.substring(0, start) + text + stepData.content.substring(end);
+    const selectedText = stepData.content.substring(start, end);
+    
+    // If text is selected, wrap it. If not, insert default text with markers
+    const textToWrap = selectedText || defaultText || "";
+    const newText = beforeText + textToWrap + afterText;
+    
+    const newContent = stepData.content.substring(0, start) + newText + stepData.content.substring(end);
     setStepData(prev => ({ ...prev, content: newContent }));
     
-    // Set cursor position after the inserted text
+    // Set cursor position
     setTimeout(() => {
-      textarea.selectionStart = textarea.selectionEnd = start + text.length;
+      if (selectedText) {
+        // If we wrapped existing text, select the wrapped content
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + newText.length;
+      } else {
+        // If we inserted template text, select the default content for easy replacement
+        const defaultTextStart = start + beforeText.length;
+        const defaultTextEnd = defaultTextStart + textToWrap.length;
+        textarea.selectionStart = defaultTextStart;
+        textarea.selectionEnd = defaultTextEnd;
+      }
       textarea.focus();
     }, 0);
   };
@@ -78,22 +176,39 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
     
     switch (format) {
       case "bold":
-        insertTextAtCursor(textarea, "**bold text**");
+        applyFormatting(textarea, "**", "**", "bold text");
         break;
       case "italic":
-        insertTextAtCursor(textarea, "*italic text*");
+        applyFormatting(textarea, "*", "*", "italic text");
         break;
       case "code":
-        insertTextAtCursor(textarea, "`code`");
+        applyFormatting(textarea, "`", "`", "code");
         break;
       case "link":
-        insertTextAtCursor(textarea, "[link text](https://example.com)");
+        applyFormatting(textarea, "[", "](https://example.com)", "link text");
         break;
     }
   };
 
   return (
-    <div className="w-96 bg-card border-l border-border flex flex-col">
+    <div 
+      ref={resizeRef}
+      className="bg-card border-l border-border flex flex-col relative"
+      style={{ width: `${editorWidth}px` }}
+    >
+      {/* Resize Handle */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors z-10 ${
+          isResizing ? 'bg-primary' : ''
+        }`}
+        onMouseDown={handleResizeStart}
+        style={{ marginLeft: '-2px' }}
+      >
+        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-muted-foreground">
+          <GripVertical className="w-3 h-3 rotate-90" />
+        </div>
+      </div>
+      
       <div className="p-4 border-b border-border flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-foreground">Step Editor</h3>
@@ -165,7 +280,8 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
                 value={stepData.content}
                 onChange={(e) => setStepData(prev => ({ ...prev, content: e.target.value }))}
                 placeholder="Enter markdown content..."
-                className="border-0 focus-visible:ring-0 font-mono text-sm resize-none h-32"
+                className="border-0 focus-visible:ring-0 font-mono text-sm resize-none"
+                style={{ height: `${Math.max(120, editorWidth / 3)}px` }}
                 data-testid="textarea-step-content"
               />
             </div>
@@ -191,10 +307,70 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Attachments</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground">
-                File attachments will be available in a future update.
-              </p>
+            <CardContent className="space-y-3">
+              {/* Upload Button */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="file"
+                  id="file-upload"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                  data-testid="button-upload-attachment"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Files
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  PDF, DOC, TXT, Images
+                </span>
+              </div>
+
+              {/* Attachment List */}
+              {stepData.attachments.length > 0 && (
+                <div className="space-y-2">
+                  {stepData.attachments.map((attachment: any) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-2 border border-border rounded-md bg-accent/50"
+                      data-testid={`attachment-${attachment.id}`}
+                    >
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <Paperclip className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {attachment.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.size)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAttachment(attachment.id)}
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-remove-attachment-${attachment.id}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {stepData.attachments.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No attachments added yet. Upload files to provide additional resources for this step.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
