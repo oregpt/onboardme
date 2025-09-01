@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { ProgressTracker } from "@/components/ProgressTracker";
+import { AIChat } from "@/components/AIChat";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +19,9 @@ export default function GuideViewer() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [currentChatStep, setCurrentChatStep] = useState<Step | null>(null);
+  const [currentChatFlowBox, setCurrentChatFlowBox] = useState<FlowBox | null>(null);
   
   const slug = params?.slug;
 
@@ -299,18 +304,32 @@ export default function GuideViewer() {
                               className="flex items-start space-x-3 p-4 border border-border rounded-lg"
                               data-testid={`step-${step.id}`}
                             >
-                              <button
-                                onClick={() => handleStepComplete(step.id)}
-                                className="mt-1"
-                                disabled={!isAuthenticated}
-                                data-testid={`button-complete-step-${step.id}`}
-                              >
-                                {isStepCompleted ? (
-                                  <CheckCircle className="w-5 h-5 text-primary" />
-                                ) : (
-                                  <Circle className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                                )}
-                              </button>
+                              <div className="flex flex-col space-y-2">
+                                <button
+                                  onClick={() => handleStepComplete(step.id)}
+                                  disabled={!isAuthenticated}
+                                  data-testid={`button-complete-step-${step.id}`}
+                                >
+                                  {isStepCompleted ? (
+                                    <CheckCircle className="w-5 h-5 text-primary" />
+                                  ) : (
+                                    <Circle className="w-5 h-5 text-muted-foreground hover:text-primary" />
+                                  )}
+                                </button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setCurrentChatStep(step);
+                                    setCurrentChatFlowBox(flowBox);
+                                    setIsChatOpen(true);
+                                  }}
+                                  className="h-6 px-2 text-xs"
+                                  data-testid={`button-ask-ai-${step.id}`}
+                                >
+                                  Ask AI
+                                </Button>
+                              </div>
                               
                               <div className="flex-1">
                                 <h4 className="font-medium text-foreground">{step.title}</h4>
@@ -473,6 +492,18 @@ export default function GuideViewer() {
           </div>
         </div>
       </div>
+
+      {/* AI Chat Component */}
+      {guide && currentChatFlowBox && currentChatStep && allSteps && (
+        <AIChat
+          guide={guide}
+          flowBox={currentChatFlowBox}
+          currentStep={currentChatStep}
+          allSteps={allSteps}
+          isOpen={isChatOpen}
+          onToggle={() => setIsChatOpen(!isChatOpen)}
+        />
+      )}
     </div>
   );
 }

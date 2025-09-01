@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema } from "@shared/schema";
+import { AIService, KnowledgeContext, type AIProvider } from "./aiService";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -311,6 +312,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating knowledge entry:", error);
       res.status(500).json({ message: "Failed to create knowledge entry" });
+    }
+  });
+
+  // AI Chat endpoint
+  app.post('/api/ai/chat', isAuthenticated, async (req, res) => {
+    try {
+      const { message, provider, guideId, flowBoxId, stepId } = req.body;
+      
+      if (!message || !guideId || !flowBoxId || !stepId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Get all required data for context
+      const guide = await storage.getGuide(guideId);
+      const flowBox = await storage.getFlowBox(flowBoxId);
+      const currentStep = await storage.getStep(stepId);
+      const allSteps = await storage.getStepsByGuide(guideId);
+
+      if (!guide || !flowBox || !currentStep) {
+        return res.status(404).json({ message: "Guide, flow box, or step not found" });
+      }
+
+      // Categorize attachments from all steps
+      const allAttachments = allSteps.flatMap(step => 
+        (step.attachments as any[]) || []
+      );
+      
+      const generalFiles = allAttachments.filter(att => att.category === 'general');
+      const faqFiles = allAttachments.filter(att => att.category === 'faq');
+      const otherHelpFiles = allAttachments.filter(att => att.category === 'other-help');
+
+      // Build knowledge context
+      const context: KnowledgeContext = {
+        guide,
+        flowBox,
+        currentStep,
+        allSteps,
+        generalFiles,
+        faqFiles,
+        otherHelpFiles,
+        agentInstructions: (flowBox as any).agentInstructions
+      };
+
+      // Generate AI response
+      const chatMessages = [{ role: 'user' as const, content: message }];
+      const response = await AIService.generateResponse(
+        chatMessages,
+        context,
+        provider as AIProvider
+      );
+
+      res.json(response);
+    } catch (error) {
+      console.error("AI Chat Error:", error);
+      res.status(500).json({ message: "Failed to generate AI response" });
     }
   });
 

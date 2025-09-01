@@ -40,6 +40,7 @@ export interface IStorage {
   // Flow operations
   createFlowBox(flowBox: InsertFlowBox): Promise<FlowBox>;
   getFlowBoxesByGuide(guideId: number): Promise<FlowBox[]>;
+  getFlowBox(id: number): Promise<FlowBox | undefined>;
   updateFlowBox(id: number, updates: Partial<InsertFlowBox>): Promise<FlowBox | undefined>;
   deleteFlowBox(id: number): Promise<boolean>;
   
@@ -47,6 +48,7 @@ export interface IStorage {
   createStep(step: InsertStep): Promise<Step>;
   getStepsByFlowBox(flowBoxId: number): Promise<Step[]>;
   getStepsByGuide(guideId: number): Promise<Step[]>;
+  getStep(id: number): Promise<Step | undefined>;
   updateStep(id: number, updates: Partial<InsertStep>): Promise<Step | undefined>;
   deleteStep(id: number): Promise<boolean>;
   
@@ -137,6 +139,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(flowBoxes.position));
   }
 
+  async getFlowBox(id: number): Promise<FlowBox | undefined> {
+    const [flowBox] = await db
+      .select()
+      .from(flowBoxes)
+      .where(eq(flowBoxes.id, id));
+    return flowBox;
+  }
+
   async updateFlowBox(id: number, updates: Partial<InsertFlowBox>): Promise<FlowBox | undefined> {
     const [updatedFlowBox] = await db
       .update(flowBoxes)
@@ -183,6 +193,14 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(flowBoxes, eq(steps.flowBoxId, flowBoxes.id))
       .where(eq(flowBoxes.guideId, guideId))
       .orderBy(asc(flowBoxes.position), asc(steps.position));
+  }
+
+  async getStep(id: number): Promise<Step | undefined> {
+    const [step] = await db
+      .select()
+      .from(steps)
+      .where(eq(steps.id, id));
+    return step;
   }
 
   async updateStep(id: number, updates: Partial<InsertStep>): Promise<Step | undefined> {

@@ -41,6 +41,7 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
   const [editingBox, setEditingBox] = useState<number | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
   const [editingDescription, setEditingDescription] = useState("");
+  const [editingAgentInstructions, setEditingAgentInstructions] = useState("");
 
   // Fetch steps for each flow box
   const { data: allSteps } = useQuery<Step[]>({
@@ -174,12 +175,14 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
     setEditingBox(flowBox.id);
     setEditingTitle(flowBox.title);
     setEditingDescription(flowBox.description || "");
+    setEditingAgentInstructions((flowBox as any).agentInstructions || "");
   };
 
   const cancelEditing = () => {
     setEditingBox(null);
     setEditingTitle("");
     setEditingDescription("");
+    setEditingAgentInstructions("");
   };
 
   const saveEdit = (id: number) => {
@@ -187,7 +190,8 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
       id,
       updates: { 
         title: editingTitle.trim() || "Untitled Flow Box",
-        description: editingDescription.trim()
+        description: editingDescription.trim(),
+        agentInstructions: editingAgentInstructions.trim()
       }
     });
     cancelEditing();
@@ -264,6 +268,14 @@ export function FlowEditor({ guideId, flowBoxes, selectedPersona, onStepSelect }
                           className="text-sm resize-none"
                           rows={2}
                           data-testid={`textarea-flowbox-description-${flowBox.id}`}
+                        />
+                        <Textarea
+                          value={editingAgentInstructions}
+                          onChange={(e) => setEditingAgentInstructions(e.target.value)}
+                          placeholder="Agent Instructions (Optional) - Custom AI behavior for this flow"
+                          className="text-sm resize-none"
+                          rows={3}
+                          data-testid={`textarea-flowbox-agent-instructions-${flowBox.id}`}
                         />
                         <div className="flex space-x-2">
                           <Button
