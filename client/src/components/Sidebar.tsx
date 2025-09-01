@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { 
   BookOpen, 
   LayoutDashboard, 
@@ -15,19 +16,56 @@ import {
 
 export function Sidebar() {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+
+  // Get user's projects to determine role
+  const { data: projects } = useQuery<Array<{id: number, userRole: string}>>(
+    { queryKey: ["/api/projects"], enabled: isAuthenticated }
+  );
+
+  // For now, use the first project's role (can be enhanced for multi-project context)
+  const userRole = projects?.[0]?.userRole || 'user';
 
   const handleLogout = () => {
     window.location.href = '/api/logout';
   };
 
-  const navItems = [
-    { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { href: "/guides", icon: Book, label: "Guides" },
-    { href: "/editor", icon: GitBranch, label: "Flow Editor" },
-    { href: "/users", icon: Users, label: "User Progress" },
-    { href: "/admin/1", icon: Settings, label: "Admin" },
-  ];
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      { href: "/guides", icon: Book, label: "Guides" }
+    ];
+
+    if (userRole === 'user') {
+      // Users can only see guides
+      return baseItems;
+    }
+
+    if (userRole === 'creator') {
+      // Creators can see dashboard, guides, and flow editor
+      return [
+        { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+        ...baseItems,
+        { href: "/editor", icon: GitBranch, label: "Flow Editor" }
+      ];
+    }
+
+    if (userRole === 'admin') {
+      // Admins can see everything
+      return [
+        { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+        ...baseItems,
+        { href: "/editor", icon: GitBranch, label: "Flow Editor" },
+        { href: "/users", icon: Users, label: "User Progress" },
+        { href: "/admin/1", icon: Settings, label: "Admin" }
+      ];
+    }
+
+    // Default fallback
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <div className="w-64 bg-card border-r border-border flex flex-col">
