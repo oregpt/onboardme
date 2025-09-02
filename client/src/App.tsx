@@ -13,6 +13,7 @@ import GuideEditor from "@/pages/GuideEditor";
 import GuideViewer from "@/pages/GuideViewer";
 import Guides from "@/pages/Guides";
 import UserProgress from "@/pages/UserProgress";
+import MyProgress from "@/pages/MyProgress";
 import Admin from "@/pages/Admin";
 import DatabaseManagement from "@/pages/DatabaseManagement";
 
@@ -41,6 +42,7 @@ function Router() {
             <Route path="/" component={Dashboard} />
             <Route path="/project/:projectId" component={ProjectDashboard} />
             <Route path="/guides" component={Guides} />
+            <Route path="/my-progress" component={MyProgress} />
             <Route path="/users" component={UserProgress} />
             <Route path="/admin/:projectId" component={Admin} />
             <Route path="/admin/database" component={DatabaseManagement} />

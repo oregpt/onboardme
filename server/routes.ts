@@ -732,6 +732,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Per-guide metrics endpoint
+  app.get('/api/metrics/guides', async (req, res) => {
+    try {
+      const metrics = await storage.getPerGuideMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching per-guide metrics:", error);
+      res.status(500).json({ message: "Failed to fetch per-guide metrics" });
+    }
+  });
+
   // Step comment routes
   app.get('/api/steps/:stepId/comments', async (req, res) => {
     try {

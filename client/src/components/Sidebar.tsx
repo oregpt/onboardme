@@ -10,7 +10,8 @@ import {
   Database,
   LogOut,
   User,
-  Settings
+  Settings,
+  TrendingUp
 } from "lucide-react";
 
 export function Sidebar() {
@@ -32,16 +33,17 @@ export function Sidebar() {
   // Define navigation items based on user role
   const getNavItems = () => {
     const baseItems = [
-      { href: "/guides", icon: Book, label: "Guides" }
+      { href: "/guides", icon: Book, label: "Guides" },
+      { href: "/my-progress", icon: TrendingUp, label: "My Progress" }
     ];
 
     if (userRole === 'user') {
-      // Users can only see guides
+      // Users can see guides and their progress
       return baseItems;
     }
 
     if (userRole === 'creator') {
-      // Creators can see dashboard and guides
+      // Creators can see dashboard, guides, and their progress
       return [
         { href: "/", icon: LayoutDashboard, label: "Dashboard" },
         ...baseItems
@@ -49,11 +51,11 @@ export function Sidebar() {
     }
 
     if (userRole === 'admin') {
-      // Admins can see everything except flow editor
+      // Admins can see everything
       return [
         { href: "/", icon: LayoutDashboard, label: "Dashboard" },
         ...baseItems,
-        { href: "/users", icon: Users, label: "User Progress" },
+        { href: "/users", icon: Users, label: "Metrics" },
         { href: "/admin/1", icon: Settings, label: "Admin" }
       ];
     }

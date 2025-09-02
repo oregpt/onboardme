@@ -15,13 +15,11 @@ export default function UserProgress() {
     queryKey: ["/api/guides"],
   });
 
-  // Fetch real user progress statistics
-  const { data: stats, isLoading: statsLoading } = useQuery<{
-    totalUsers: number;
-    avgCompletion: number;
-    completedGuides: number;
-  }>({
-    queryKey: ["/api/user-progress/stats"],
+  // Fetch per-guide metrics data
+  const { data: guideMetrics = [], isLoading: metricsLoading } = useQuery<any[]>({
+    queryKey: ["/api/metrics/guides"],
+    staleTime: 0,
+    cacheTime: 0,
   });
 
   // Filter guides by selected project
@@ -31,12 +29,12 @@ export default function UserProgress() {
     return allGuides.filter(guide => guide.projectId === selectedProjectId);
   }, [allGuides, selectedProjectId]);
 
-  // Fetch detailed user progress data
-  const { data: userProgressData = [], isLoading: detailedLoading } = useQuery<any[]>({
-    queryKey: ["/api/user-progress/detailed"],
-    staleTime: 0,
-    cacheTime: 0,
-  });
+  // Filter metrics by selected project
+  const filteredMetrics = useMemo(() => {
+    if (!guideMetrics || !selectedProjectId) return guideMetrics;
+    const guideIds = guides.map(g => g.id);
+    return guideMetrics.filter(metric => guideIds.includes(metric.guideId));
+  }, [guideMetrics, guides, selectedProjectId]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -44,114 +42,101 @@ export default function UserProgress() {
         <header className="bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">User Progress</h2>
+              <h2 className="text-2xl font-bold text-foreground">Metrics</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Track user progress across all guides
+                View analytics and performance metrics for each guide
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" data-testid="button-export-progress">
-                Export Data
+              <Button variant="outline" data-testid="button-export-metrics">
+                Export Metrics
               </Button>
             </div>
           </div>
         </header>
 
         <div className="flex-1 p-6 overflow-auto">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsLoading ? '...' : stats?.totalUsers || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {statsLoading ? 'Loading...' : stats?.totalUsers ? 'Active users' : 'No data available'}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Completion</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsLoading ? '...' : `${stats?.avgCompletion || 0}%`}</div>
-                <p className="text-xs text-muted-foreground">
-                  {statsLoading ? 'Loading...' : stats?.avgCompletion ? 'Average progress' : 'No data available'}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed Guides</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsLoading ? '...' : stats?.completedGuides || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {statsLoading ? 'Loading...' : stats?.completedGuides ? 'Fully completed' : 'No data available'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* User Progress Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>User Progress Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {detailedLoading ? (
-                <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : userProgressData.length > 0 ? (
-                <div className="space-y-4">
-                  {userProgressData.map((user) => (
-                    <div key={user.userId} className="border border-border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-foreground">{user.userName}</h4>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+          {/* Per-Guide Metrics Cards */}
+          <div className="space-y-6">
+            {metricsLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : filteredMetrics.length > 0 ? (
+              filteredMetrics.map((metric) => (
+                <Card key={metric.guideId}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{metric.guideName}</CardTitle>
+                        {metric.guideDescription && (
+                          <p className="text-sm text-muted-foreground mt-1">{metric.guideDescription}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline">{metric.totalSteps} steps</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <Users className="h-4 w-4 text-muted-foreground mr-1" />
+                          <span className="text-sm font-medium">Total Users</span>
                         </div>
-                        <Badge variant="outline">
-                          {user.guides.length} guide{user.guides.length !== 1 ? 's' : ''}
-                        </Badge>
+                        <div className="text-2xl font-bold">{metric.totalUsers}</div>
+                        <p className="text-xs text-muted-foreground">Active users</p>
                       </div>
                       
-                      {user.guides.map((guide) => (
-                        <div key={guide.guideId} className="bg-muted rounded-md p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm">{guide.guideName}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {guide.completedSteps}/{guide.totalSteps} steps
-                            </span>
-                          </div>
-                          <Progress value={guide.progress} className="mb-2" />
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{guide.progress}% complete</span>
-                            <span>Last active: {guide.lastActive}</span>
-                          </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <TrendingUp className="h-4 w-4 text-muted-foreground mr-1" />
+                          <span className="text-sm font-medium">Avg Completion</span>
                         </div>
-                      ))}
+                        <div className="text-2xl font-bold">{metric.avgCompletion}%</div>
+                        <p className="text-xs text-muted-foreground">Average progress</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <CheckCircle className="h-4 w-4 text-muted-foreground mr-1" />
+                          <span className="text-sm font-medium">Completed</span>
+                        </div>
+                        <div className="text-2xl font-bold">{metric.totalCompleted}</div>
+                        <p className="text-xs text-muted-foreground">Fully completed</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <span className="text-sm font-medium">Completion Rate</span>
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {metric.totalUsers > 0 ? Math.round((metric.totalCompleted / metric.totalUsers) * 100) : 0}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">Users who finished</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <h3 className="text-lg font-medium text-foreground mb-2">No user progress data</h3>
-                  <p className="text-muted-foreground">
-                    Progress data will appear here once users start using your guides
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    
+                    {metric.totalUsers > 0 && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Overall Progress</span>
+                          <span className="text-sm text-muted-foreground">{metric.avgCompletion}%</span>
+                        </div>
+                        <Progress value={metric.avgCompletion} />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-16">
+                <h3 className="text-lg font-medium text-foreground mb-2">No metrics data available</h3>
+                <p className="text-muted-foreground">
+                  Metrics will appear here once users start engaging with your guides
+                </p>
+              </div>
+            )}
+          </div>
         </div>
     </div>
   );

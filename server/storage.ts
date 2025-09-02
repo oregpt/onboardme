@@ -758,6 +758,64 @@ export class DatabaseStorage implements IStorage {
 
     return Array.from(userMap.values());
   }
+
+  async getPerGuideMetrics(): Promise<any[]> {
+    // Get all guides with their step counts and user progress
+    const guidesWithMetrics = await db
+      .select({
+        guideId: guides.id,
+        guideName: guides.title,
+        guideDescription: guides.description
+      })
+      .from(guides);
+
+    // Get step counts per guide
+    const stepCounts = await db
+      .select({
+        guideId: flowBoxes.guideId,
+        totalSteps: sql<number>`count(*)::int`
+      })
+      .from(steps)
+      .leftJoin(flowBoxes, eq(steps.flowBoxId, flowBoxes.id))
+      .groupBy(flowBoxes.guideId);
+
+    // Get user progress metrics per guide
+    const progressMetrics = await db
+      .select({
+        guideId: userProgress.guideId,
+        totalUsers: sql<number>`count(distinct ${userProgress.userId})::int`,
+        avgCompletedSteps: sql<number>`avg(array_length(${userProgress.completedSteps}, 1))::int`,
+        totalCompleted: sql<number>`count(case when array_length(${userProgress.completedSteps}, 1) = (
+          select count(*) from ${steps} s 
+          join ${flowBoxes} fb on s.flow_box_id = fb.id 
+          where fb.guide_id = ${userProgress.guideId}
+        ) then 1 end)::int`
+      })
+      .from(userProgress)
+      .groupBy(userProgress.guideId);
+
+    // Combine the data
+    const metrics = guidesWithMetrics.map(guide => {
+      const stepData = stepCounts.find(sc => sc.guideId === guide.guideId);
+      const progressData = progressMetrics.find(pm => pm.guideId === guide.guideId);
+      
+      const totalSteps = stepData?.totalSteps || 0;
+      const avgCompletedSteps = progressData?.avgCompletedSteps || 0;
+      const avgCompletion = totalSteps > 0 ? Math.round((avgCompletedSteps / totalSteps) * 100) : 0;
+
+      return {
+        guideId: guide.guideId,
+        guideName: guide.guideName,
+        guideDescription: guide.guideDescription,
+        totalUsers: progressData?.totalUsers || 0,
+        totalSteps,
+        avgCompletion,
+        totalCompleted: progressData?.totalCompleted || 0
+      };
+    });
+
+    return metrics;
+  }
 }
 
 export const storage = new DatabaseStorage();
