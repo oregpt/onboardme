@@ -82,14 +82,14 @@ export default function FlowTileView({
                 {/* Progress Bar */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">
+                    <span className="text-gray-300">Progress</span>
+                    <span className="font-medium text-black">
                       {completedBoxSteps}/{boxSteps.length} steps
                     </span>
                   </div>
                   <Progress 
                     value={progressPercentage} 
-                    className="h-2"
+                    className="h-2 bg-gray-100 [&>div]:bg-primary"
                   />
                 </div>
 
