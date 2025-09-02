@@ -298,7 +298,7 @@ export default function GuideViewer() {
       </header>
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="container mx-auto px-4 py-8 pb-16 max-w-7xl min-h-full">
+        <div className="container mx-auto px-4 py-8 pb-32 max-w-7xl min-h-full">
         {viewMode === 'tile' ? (
           <FlowTileView
             flowBoxes={flowBoxes || []}
