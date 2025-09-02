@@ -784,8 +784,8 @@ export class DatabaseStorage implements IStorage {
       .select({
         guideId: userProgress.guideId,
         totalUsers: sql<number>`count(distinct ${userProgress.userId})::int`,
-        avgCompletedSteps: sql<number>`avg(array_length(${userProgress.completedSteps}, 1))::int`,
-        totalCompleted: sql<number>`count(case when array_length(${userProgress.completedSteps}, 1) = (
+        avgCompletedSteps: sql<number>`avg(jsonb_array_length(${userProgress.completedSteps}))::int`,
+        totalCompleted: sql<number>`count(case when jsonb_array_length(${userProgress.completedSteps}) = (
           select count(*) from ${steps} s 
           join ${flowBoxes} fb on s.flow_box_id = fb.id 
           where fb.guide_id = ${userProgress.guideId}
