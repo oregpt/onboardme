@@ -6,14 +6,27 @@ import type { Guide } from "@shared/schema";
 import { Plus, Edit, Eye, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProjectContext } from "@/components/AppLayout";
+import { useAuth } from "@/hooks/useAuth";
 import { useMemo } from "react";
 
 export default function Guides() {
   const { selectedProjectId } = useProjectContext();
+  const { user, isAuthenticated } = useAuth();
   
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
+
+  // Get user's projects to determine role
+  const { data: projects } = useQuery<Array<{id: number, userRole: string}>>(
+    { queryKey: ["/api/projects"], enabled: isAuthenticated }
+  );
+
+  // For now, use the first project's role (can be enhanced for multi-project context)
+  const userRole = projects?.[0]?.userRole || 'user';
+  
+  // Check if user can create/edit guides (admin, creator, or platform admin)
+  const canManageGuides = userRole === 'admin' || userRole === 'creator' || user?.isPlatformAdmin;
 
   // Filter guides by selected project
   const guides = useMemo(() => {
@@ -33,12 +46,14 @@ export default function Guides() {
                 Manage your onboarding guides and workflows
               </p>
             </div>
-            <Link href="/editor">
-              <Button data-testid="button-create-guide">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Guide
-              </Button>
-            </Link>
+            {canManageGuides && (
+              <Link href="/editor">
+                <Button data-testid="button-create-guide">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Guide
+                </Button>
+              </Link>
+            )}
           </div>
         </header>
 
@@ -67,16 +82,18 @@ export default function Guides() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="flex space-x-2">
-                        <Link href={`/editor/${guide.id}`}>
-                          <Button size="sm" variant="outline" data-testid={`button-edit-${guide.id}`}>
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                        </Link>
+                        {canManageGuides && (
+                          <Link href={`/editor/${guide.id}`}>
+                            <Button size="sm" variant="outline" data-testid={`button-edit-${guide.id}`}>
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          </Link>
+                        )}
                         <Link href={`/guide/${guide.slug}`}>
                           <Button size="sm" variant="outline" data-testid={`button-preview-${guide.id}`}>
                             <Eye className="w-4 h-4 mr-1" />
-                            Preview
+                            {canManageGuides ? 'Preview' : 'View'}
                           </Button>
                         </Link>
                       </div>
@@ -89,16 +106,23 @@ export default function Guides() {
                 </Card>
               )) || (
                 <div className="col-span-full text-center py-16">
-                  <h3 className="text-lg font-medium text-foreground mb-2">No guides yet</h3>
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    {canManageGuides ? 'No guides yet' : 'No guides available'}
+                  </h3>
                   <p className="text-muted-foreground mb-6">
-                    Create your first onboarding guide to get started
+                    {canManageGuides 
+                      ? 'Create your first onboarding guide to get started'
+                      : 'No guides have been created yet. Check back later!'
+                    }
                   </p>
-                  <Link href="/editor">
-                    <Button data-testid="button-create-first-guide">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Your First Guide
-                    </Button>
-                  </Link>
+                  {canManageGuides && (
+                    <Link href="/editor">
+                      <Button data-testid="button-create-first-guide">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Your First Guide
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
