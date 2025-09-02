@@ -617,8 +617,30 @@ export default function Admin() {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
-                                          // TODO: Add remove member functionality
+                                        onClick={async () => {
+                                          try {
+                                            const response = await fetch(`/api/projects/${project.id}/members/${member.id}`, {
+                                              method: 'DELETE',
+                                            });
+                                            
+                                            if (response.ok) {
+                                              toast({
+                                                title: "Member removed",
+                                                description: "Member has been successfully removed from the project.",
+                                              });
+                                              // Refresh the projects list
+                                              queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+                                            } else {
+                                              throw new Error('Failed to remove member');
+                                            }
+                                          } catch (error) {
+                                            console.error('Error removing member:', error);
+                                            toast({
+                                              title: "Error",
+                                              description: "Failed to remove member from project.",
+                                              variant: "destructive",
+                                            });
+                                          }
                                         }}
                                         data-testid={`button-remove-member-${member.userId}`}
                                       >
