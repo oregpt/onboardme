@@ -74,8 +74,7 @@ export function Sidebar() {
             <BookOpen className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Guide Builder</h1>
-            <p className="text-sm text-muted-foreground">v1.0.0</p>
+            <h1 className="text-lg font-semibold text-foreground">onboardMe</h1>
           </div>
         </div>
       </div>
