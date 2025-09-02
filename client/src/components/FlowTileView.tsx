@@ -52,8 +52,8 @@ export default function FlowTileView({
                       isBoxCompleted 
                         ? "bg-primary text-primary-foreground" 
                         : progressPercentage > 0
-                        ? "bg-orange-500 text-white"
-                        : "bg-secondary text-secondary-foreground"
+                        ? "bg-orange-200 text-orange-800"
+                        : "bg-gray-300 text-gray-600"
                     }`}>
                       {isBoxCompleted ? (
                         <CheckCircle className="w-5 h-5" />
