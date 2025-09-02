@@ -188,6 +188,34 @@ export default function GuideViewer() {
     setViewMode('detailed');
   };
 
+  const handleStepNavigation = (stepId: number, flowBoxId: number) => {
+    // Navigate to the specific flow box and scroll to the step
+    setSelectedFlowBoxId(flowBoxId);
+    setViewMode('detailed');
+    
+    // Scroll to the step after a brief delay to allow the DOM to update
+    setTimeout(() => {
+      const stepElement = document.querySelector(`[data-step-id="${stepId}"]`);
+      if (stepElement) {
+        stepElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
+  const handleFlowBoxNavigation = (flowBoxId: number) => {
+    // Navigate to the specific flow box
+    setSelectedFlowBoxId(flowBoxId);
+    setViewMode('detailed');
+    
+    // Scroll to the flow box after a brief delay to allow the DOM to update
+    setTimeout(() => {
+      const flowBoxElement = document.querySelector(`[data-flowbox-id="${flowBoxId}"]`);
+      if (flowBoxElement) {
+        flowBoxElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   const downloadAttachment = (attachment: any) => {
     try {
       // Convert base64 data to blob
@@ -356,7 +384,7 @@ export default function GuideViewer() {
                 const isBoxCompleted = (userProgress?.completedFlowBoxes as number[])?.includes(flowBox.id);
 
                 return (
-                  <Card key={flowBox.id} className="flow-node">
+                  <Card key={flowBox.id} className="flow-node" data-flowbox-id={flowBox.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -411,6 +439,7 @@ export default function GuideViewer() {
                               key={step.id}
                               className="flex items-start space-x-3 p-4 border border-border rounded-lg"
                               data-testid={`step-${step.id}`}
+                              data-step-id={step.id}
                             >
                               <div className="flex flex-col space-y-2">
                                 <button
@@ -584,6 +613,8 @@ export default function GuideViewer() {
                 userProgress={userProgress}
                 onStepComplete={handleStepToggle}
                 onFlowBoxComplete={handleFlowToggle}
+                onStepClick={handleStepNavigation}
+                onFlowBoxClick={handleFlowBoxNavigation}
               />
             )}
 

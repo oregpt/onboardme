@@ -10,9 +10,11 @@ interface ProgressTrackerProps {
   userProgress?: UserProgress | null;
   onStepComplete: (stepId: number) => void;
   onFlowBoxComplete: (flowBoxId: number) => void;
+  onStepClick?: (stepId: number, flowBoxId: number) => void;
+  onFlowBoxClick?: (flowBoxId: number) => void;
 }
 
-export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete, onFlowBoxComplete }: ProgressTrackerProps) {
+export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete, onFlowBoxComplete, onStepClick, onFlowBoxClick }: ProgressTrackerProps) {
   const totalSteps = Object.values(steps).flat().length;
   const completedSteps = (userProgress?.completedSteps as number[])?.length || 0;
   const progressPercentage = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
@@ -56,6 +58,7 @@ export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete
                     onClick={() => onFlowBoxComplete(flowBox.id)}
                     className="flex-shrink-0 transition-colors duration-200"
                     data-testid={`button-progress-flowbox-${flowBox.id}`}
+                    title="Mark flow box as complete/incomplete"
                   >
                     {isFlowBoxCompleted ? (
                       <CheckCircle className="h-5 w-5 text-primary hover:text-primary/80" />
@@ -63,7 +66,13 @@ export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete
                       <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
                     )}
                   </button>
-                  <h4 className="font-medium text-sm">{flowBox.title}</h4>
+                  <button 
+                    className="flex-1 text-left hover:bg-accent/50 rounded px-2 py-1 transition-colors duration-200"
+                    onClick={() => onFlowBoxClick?.(flowBox.id)}
+                    title="Navigate to this flow box"
+                  >
+                    <h4 className="font-medium text-sm">{flowBox.title}</h4>
+                  </button>
                   <Badge variant="outline" className="text-xs">
                     {completedBoxSteps}/{boxSteps.length}
                   </Badge>
@@ -83,6 +92,7 @@ export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete
                           onClick={() => onStepComplete(step.id)}
                           className="flex-shrink-0"
                           data-testid={`button-progress-step-${step.id}`}
+                          title="Mark step as complete/incomplete"
                         >
                           {isStepCompleted ? (
                             <CheckCircle className="w-4 h-4 text-primary" />
@@ -90,11 +100,15 @@ export function ProgressTracker({ flowBoxes, steps, userProgress, onStepComplete
                             <Circle className="w-4 h-4 text-muted-foreground hover:text-primary" />
                           )}
                         </button>
-                        <span className={`text-xs flex-1 ${
-                          isStepCompleted ? "line-through text-muted-foreground" : "text-foreground"
-                        }`}>
-                          {step.title}
-                        </span>
+                        <button
+                          className="text-xs flex-1 text-left hover:bg-accent/50 rounded px-2 py-1 transition-colors duration-200"
+                          onClick={() => onStepClick?.(step.id, flowBox.id)}
+                          title="Navigate to this step"
+                        >
+                          <span className={isStepCompleted ? "line-through text-muted-foreground" : "text-foreground"}>
+                            {step.title}
+                          </span>
+                        </button>
                       </div>
                     );
                   })}
