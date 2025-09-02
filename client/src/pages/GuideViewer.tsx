@@ -309,7 +309,7 @@ export default function GuideViewer() {
         ) : (
           <div className="grid lg:grid-cols-4 gap-8">
             {/* Main Content - Made wider */}
-            <div className="lg:col-span-3 space-y-8">
+            <div className="lg:col-span-3 space-y-8 overflow-y-auto max-h-screen scrollbar-thin pr-4">
               {/* Back to Overview Button */}
               <div className="flex items-center justify-between">
                 <Button
