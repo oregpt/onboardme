@@ -999,6 +999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`📥 Importing ${tableName} (${tableData.length} records)...`);
           
           // Direct database insertion with conflict resolution - bypasses all normal controls
+          let imported = 0;
           try {
             // Get the appropriate table schema
             let tableSchema;
@@ -1090,7 +1091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           importedTables++;
           totalRecords += imported;
 
-        } catch (tableError) {
+        } catch (tableError: any) {
           console.error(`Error importing table ${tableName}:`, tableError);
           results[tableName] = { error: tableError.message };
         }

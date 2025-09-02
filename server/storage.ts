@@ -310,6 +310,35 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
+  // Export methods for admin functionality
+  async getAllUsers() {
+    return await db.select().from(users);
+  }
+
+  async getAllProjects() {
+    return await db.select().from(projects);
+  }
+
+  async getAllProjectMembers() {
+    return await db.select().from(projectMembers);
+  }
+
+  async getAllGuides() {
+    return await db.select().from(guides);
+  }
+
+  async getAllFlowBoxes() {
+    return await db.select().from(flowBoxes);
+  }
+
+  async getAllSteps() {
+    return await db.select().from(steps);
+  }
+
+  async getAllUserProgress() {
+    return await db.select().from(userProgress);
+  }
+
   // Guide operations
   async createGuide(guide: InsertGuide): Promise<Guide> {
     const [newGuide] = await db.insert(guides).values(guide).returning();
@@ -412,6 +441,7 @@ export class DatabaseStorage implements IStorage {
         personaVariations: steps.personaVariations,
         position: steps.position,
         isVisible: steps.isVisible,
+        isCritical: steps.isCritical,
         attachments: steps.attachments,
         createdAt: steps.createdAt,
         updatedAt: steps.updatedAt,
