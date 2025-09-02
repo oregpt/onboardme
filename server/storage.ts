@@ -711,7 +711,7 @@ export class DatabaseStorage implements IStorage {
         completedFlowBoxes: userProgress.completedFlowBoxes,
         lastAccessedAt: userProgress.lastAccessedAt,
         guideName: guides.title,
-        userName: users.username,
+        userName: sql<string>`CONCAT(${users.firstName}, ' ', ${users.lastName})`,
         userEmail: users.email
       })
       .from(userProgress)
