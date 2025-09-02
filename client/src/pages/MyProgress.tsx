@@ -79,11 +79,6 @@ export default function MyProgress() {
                 Track your personal progress across all guides
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" data-testid="button-export-my-progress">
-                Export My Data
-              </Button>
-            </div>
           </div>
         </header>
 

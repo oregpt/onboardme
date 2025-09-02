@@ -47,11 +47,6 @@ export default function UserProgress() {
                 View analytics and performance metrics for each guide
               </p>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" data-testid="button-export-metrics">
-                Export Metrics
-              </Button>
-            </div>
           </div>
         </header>
 
