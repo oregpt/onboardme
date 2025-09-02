@@ -224,7 +224,7 @@ export default function GuideViewer() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border flex-shrink-0">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -309,7 +309,7 @@ export default function GuideViewer() {
         ) : (
           <div className="grid lg:grid-cols-4 gap-8">
             {/* Main Content - Made wider */}
-            <div className="lg:col-span-3 space-y-8 overflow-y-auto max-h-screen scrollbar-thin pr-4">
+            <div className="lg:col-span-3 space-y-8">
               {/* Back to Overview Button */}
               <div className="flex items-center justify-between">
                 <Button
@@ -576,7 +576,7 @@ export default function GuideViewer() {
           </div>
 
           {/* Progress Sidebar */}
-          <div className="space-y-6 overflow-y-auto max-h-screen scrollbar-thin">
+          <div className="space-y-6">
             {isAuthenticated && (
               <ProgressTracker
                 flowBoxes={flowBoxes || []}
