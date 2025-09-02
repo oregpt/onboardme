@@ -34,6 +34,8 @@ export default function UserProgress() {
   // Fetch detailed user progress data
   const { data: userProgressData = [], isLoading: detailedLoading } = useQuery<any[]>({
     queryKey: ["/api/user-progress/detailed"],
+    staleTime: 0,
+    cacheTime: 0,
   });
 
   return (
