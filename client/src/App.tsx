@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
 import NotFound from "@/pages/not-found";
-import SimpleLanding from "@/pages/SimpleLanding";
+import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import ProjectDashboard from "@/pages/ProjectDashboard";
 import GuideEditor from "@/pages/GuideEditor";
@@ -33,7 +33,7 @@ function Router() {
         </Route>
       ) : !isAuthenticated ? (
         <>
-          <Route path="/" component={SimpleLanding} />
+          <Route path="/" component={Landing} />
           <Route path="/guide/:slug" component={GuideViewer} />
           <Route component={NotFound} />
         </>

@@ -15,7 +15,11 @@ import {
   MessageCircle
 } from "lucide-react";
 
-export function Sidebar() {
+interface SidebarProps {
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ onMobileClose }: SidebarProps) {
   const [location] = useLocation();
   const { user, isAuthenticated } = useAuth();
 
@@ -95,6 +99,7 @@ export function Sidebar() {
                     : "hover:bg-accent text-foreground"
                 }`}
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                onClick={() => onMobileClose?.()}
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>
