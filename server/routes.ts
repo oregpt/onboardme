@@ -721,6 +721,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Detailed user progress endpoint
+  app.get('/api/user-progress/detailed', async (req, res) => {
+    try {
+      const detailedProgress = await storage.getDetailedUserProgress();
+      res.json(detailedProgress);
+    } catch (error) {
+      console.error("Error fetching detailed user progress:", error);
+      res.status(500).json({ message: "Failed to fetch detailed user progress" });
+    }
+  });
+
   // Step comment routes
   app.get('/api/steps/:stepId/comments', async (req, res) => {
     try {

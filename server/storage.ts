@@ -700,6 +700,64 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(stepComments).where(eq(stepComments.id, id));
     return (result.rowCount ?? 0) > 0;
   }
+
+  async getDetailedUserProgress(): Promise<any[]> {
+    // Get all user progress with user and guide information
+    const progressData = await db
+      .select({
+        userId: userProgress.userId,
+        guideId: userProgress.guideId,
+        completedSteps: userProgress.completedSteps,
+        completedFlowBoxes: userProgress.completedFlowBoxes,
+        lastAccessedAt: userProgress.lastAccessedAt,
+        guideName: guides.title,
+        userName: users.username,
+        userEmail: users.email
+      })
+      .from(userProgress)
+      .leftJoin(guides, eq(userProgress.guideId, guides.id))
+      .leftJoin(users, eq(userProgress.userId, users.id));
+
+    // Get total steps for each guide
+    const guideSteps = await db
+      .select({
+        guideId: flowBoxes.guideId,
+        stepCount: sql<number>`count(*)::int`
+      })
+      .from(steps)
+      .leftJoin(flowBoxes, eq(steps.flowBoxId, flowBoxes.id))
+      .groupBy(flowBoxes.guideId);
+
+    // Transform data for frontend
+    const userMap = new Map();
+    
+    for (const progress of progressData) {
+      if (!userMap.has(progress.userId)) {
+        userMap.set(progress.userId, {
+          userId: progress.userId,
+          userName: progress.userName || 'Unknown User',
+          email: progress.userEmail || 'No email',
+          guides: []
+        });
+      }
+
+      const user = userMap.get(progress.userId);
+      const completedStepsArray = Array.isArray(progress.completedSteps) ? progress.completedSteps : [];
+      const totalSteps = guideSteps.find(g => g.guideId === progress.guideId)?.stepCount || 0;
+      const progressPercentage = totalSteps > 0 ? Math.round((completedStepsArray.length / totalSteps) * 100) : 0;
+
+      user.guides.push({
+        guideId: progress.guideId,
+        guideName: progress.guideName || 'Unknown Guide',
+        completedSteps: completedStepsArray.length,
+        totalSteps,
+        progress: progressPercentage,
+        lastActive: progress.lastAccessedAt ? new Date(progress.lastAccessedAt).toLocaleDateString() : 'Never'
+      });
+    }
+
+    return Array.from(userMap.values());
+  }
 }
 
 export const storage = new DatabaseStorage();
