@@ -293,10 +293,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email and role are required" });
       }
       
-      // Find user by email
-      const targetUser = await storage.getUserByEmail(email);
+      // Find or create user by email
+      let targetUser = await storage.getUserByEmail(email);
       if (!targetUser) {
-        return res.status(404).json({ message: "User not found" });
+        // Create a placeholder user record for the invitation
+        // The user will be fully set up when they first log in
+        targetUser = await storage.createPlaceholderUser(email);
       }
       
       const member = await storage.addProjectMember(projectId, targetUser.id, memberRole);

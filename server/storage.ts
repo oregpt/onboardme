@@ -120,6 +120,26 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async createPlaceholderUser(email: string): Promise<User> {
+    // Generate a temporary ID for the placeholder user
+    // When they actually log in, this will be updated with their real Replit user ID
+    const tempId = `placeholder_${Date.now()}_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    
+    const [user] = await db
+      .insert(users)
+      .values({
+        id: tempId,
+        email: email,
+        firstName: email.split('@')[0], // Use email prefix as temporary name
+        lastName: null,
+        profileImageUrl: null,
+        isPlatformAdmin: false
+      })
+      .returning();
+    
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     // Set platform admin for ore.phillips@icloud.com
     if (userData.email === 'ore.phillips@icloud.com') {
