@@ -133,7 +133,7 @@ export function AIChat({ guide, flowBox, currentStep, allSteps, allFlowBoxes, is
   }
 
   return (
-    <Card className={`fixed bottom-6 right-6 w-96 shadow-xl z-50 ${isMinimized ? 'h-14' : 'h-[600px]'} flex flex-col`}>
+    <Card className={`fixed bottom-6 left-6 w-96 shadow-xl z-50 ${isMinimized ? 'h-14' : 'h-[600px]'} flex flex-col`}>
       <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
         <div className="flex items-center space-x-2">
           <Brain className="w-5 h-5 text-primary" />
@@ -208,7 +208,7 @@ export function AIChat({ guide, flowBox, currentStep, allSteps, allFlowBoxes, is
           <CardContent className="flex-1 overflow-hidden p-0">
             <div className="h-full flex flex-col">
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {messages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     <Bot className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
