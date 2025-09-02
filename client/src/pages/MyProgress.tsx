@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { useProjectContext } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemo } from "react";
+import { useLocation } from "wouter";
 
 export default function MyProgress() {
   const { selectedProjectId } = useProjectContext();
   const { user, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
@@ -37,6 +39,14 @@ export default function MyProgress() {
     if (!userProgressData || !user) return [];
     return userProgressData.filter(userData => userData.userId === user.id);
   }, [userProgressData, user]);
+
+  // Function to navigate to guide
+  const navigateToGuide = (guideId: number) => {
+    const guide = allGuides?.find(g => g.id === guideId);
+    if (guide?.slug) {
+      setLocation(`/guide/${guide.slug}`);
+    }
+  };
 
   // Calculate user-specific stats
   const userStats = useMemo(() => {
@@ -137,9 +147,16 @@ export default function MyProgress() {
                       </div>
                       
                       {userData.guides.map((guide: any) => (
-                        <div key={guide.guideId} className="bg-muted rounded-md p-3">
+                        <div 
+                          key={guide.guideId} 
+                          className="bg-muted rounded-md p-3 cursor-pointer hover:bg-muted/80 transition-colors"
+                          onClick={() => navigateToGuide(guide.guideId)}
+                          data-testid={`guide-card-${guide.guideId}`}
+                        >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm">{guide.guideName}</span>
+                            <span className="font-medium text-sm hover:text-primary transition-colors">
+                              {guide.guideName}
+                            </span>
                             <span className="text-sm text-muted-foreground">
                               {guide.completedSteps}/{guide.totalSteps} steps
                             </span>
