@@ -576,7 +576,7 @@ export default function GuideViewer() {
           </div>
 
           {/* Progress Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-y-auto max-h-screen scrollbar-thin">
             {isAuthenticated && (
               <ProgressTracker
                 flowBoxes={flowBoxes || []}
