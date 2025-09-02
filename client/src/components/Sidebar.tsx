@@ -11,7 +11,8 @@ import {
   LogOut,
   User,
   Settings,
-  TrendingUp
+  TrendingUp,
+  MessageCircle
 } from "lucide-react";
 
 export function Sidebar() {
@@ -34,6 +35,7 @@ export function Sidebar() {
   const getNavItems = () => {
     const baseItems = [
       { href: "/guides", icon: Book, label: "Guides" },
+      { href: "/chat", icon: MessageCircle, label: "Chat" },
       { href: "/my-progress", icon: TrendingUp, label: "My Progress" }
     ];
 
