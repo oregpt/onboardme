@@ -68,23 +68,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
         case 'other':
-          // Route based on existing access
+          // Add user to Project 2 as a user if not already a member
           try {
-            const projects = await storage.getProjects(userId);
-            if (projects.length > 0) {
-              // Take them to their first project
-              return res.redirect(`/project/${projects[0].id}`);
-            } else {
-              // No projects, take them to main dashboard
-              return res.redirect('/');
+            const existingRole = await storage.getUserProjectRole(userId, 2);
+            if (!existingRole) {
+              await storage.addProjectMember(2, userId, 'user');
             }
+            return res.redirect('/project/2');
           } catch (error) {
-            console.error('Error finding user projects:', error);
+            console.error('Error adding user to Project 2:', error);
             return res.redirect('/');
           }
 
         default:
-          return res.redirect('/');
+          // Add user to Project 2 as a user if not already a member
+          try {
+            const existingRole = await storage.getUserProjectRole(userId, 2);
+            if (!existingRole) {
+              await storage.addProjectMember(2, userId, 'user');
+            }
+            return res.redirect('/project/2');
+          } catch (error) {
+            console.error('Error adding user to Project 2:', error);
+            return res.redirect('/');
+          }
       }
     } catch (error) {
       console.error('Error in onboarding flow:', error);
