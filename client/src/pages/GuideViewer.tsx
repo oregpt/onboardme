@@ -7,11 +7,12 @@ import { Progress } from "@/components/ui/progress";
 import { ProgressTracker } from "@/components/ProgressTracker";
 import { AIChat } from "@/components/AIChat";
 import StepComments from "@/components/StepComments";
+import FlowTileView from "@/components/FlowTileView";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide, FlowBox, Step, UserProgress } from "@shared/schema";
-import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download, Brain, AlertTriangle } from "lucide-react";
+import { CheckCircle, Circle, ArrowLeft, BookOpen, User, Download, Brain, AlertTriangle, Grid3X3, List } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
 
@@ -23,6 +24,8 @@ export default function GuideViewer() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentChatStep, setCurrentChatStep] = useState<Step | null>(null);
   const [currentChatFlowBox, setCurrentChatFlowBox] = useState<FlowBox | null>(null);
+  const [viewMode, setViewMode] = useState<'tile' | 'detailed'>('tile');
+  const [selectedFlowBoxId, setSelectedFlowBoxId] = useState<number | null>(null);
   
   const slug = params?.slug;
 
@@ -180,6 +183,11 @@ export default function GuideViewer() {
     }
   };
 
+  const handleFlowClick = (flowBoxId: number) => {
+    setSelectedFlowBoxId(flowBoxId);
+    setViewMode('detailed');
+  };
+
   const downloadAttachment = (attachment: any) => {
     try {
       // Convert base64 data to blob
@@ -216,9 +224,9 @@ export default function GuideViewer() {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border">
+      <header className="bg-card border-b border-border flex-shrink-0">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button 
@@ -242,11 +250,38 @@ export default function GuideViewer() {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center border border-border rounded-md">
+              <Button
+                size="sm"
+                variant={viewMode === 'tile' ? 'default' : 'ghost'}
+                onClick={() => {
+                  setViewMode('tile');
+                  setSelectedFlowBoxId(null);
+                }}
+                className="rounded-r-none border-r-0"
+                data-testid="button-tile-view"
+              >
+                <Grid3X3 className="w-4 h-4 mr-1" />
+                Overview
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'detailed' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('detailed')}
+                className="rounded-l-none"
+                data-testid="button-detailed-view"
+              >
+                <List className="w-4 h-4 mr-1" />
+                Detailed
+              </Button>
+            </div>
+
             {isAuthenticated ? (
               <div className="flex items-center space-x-2">
                 <User className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {user?.firstName || user?.email}
+                  {(user as any)?.firstName || (user as any)?.email}
                 </span>
               </div>
             ) : (
@@ -262,30 +297,58 @@ export default function GuideViewer() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Guide Overview */}
-            {guide.globalInformation && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Guide Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none">
-                    <ReactMarkdown>
-                      {guide.globalInformation}
-                    </ReactMarkdown>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {viewMode === 'tile' ? (
+          <FlowTileView
+            flowBoxes={flowBoxes || []}
+            groupedSteps={groupedSteps}
+            userProgress={userProgress}
+            onFlowClick={handleFlowClick}
+          />
+        ) : (
+          <div className="grid lg:grid-cols-4 gap-8">
+            {/* Main Content - Made wider */}
+            <div className="lg:col-span-3 space-y-8">
+              {/* Back to Overview Button */}
+              <div className="flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setViewMode('tile')}
+                  data-testid="button-back-to-overview"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Overview
+                </Button>
+                {selectedFlowBoxId && (
+                  <span className="text-sm text-muted-foreground">
+                    Viewing: {flowBoxes?.find(f => f.id === selectedFlowBoxId)?.title}
+                  </span>
+                )}
+              </div>
 
-            {/* Flow Boxes */}
-            <div className="space-y-6">
-              {flowBoxes?.map((flowBox, index) => {
+              {/* Guide Overview */}
+              {guide.globalInformation && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Guide Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="prose prose-sm max-w-none">
+                      <ReactMarkdown>
+                        {guide.globalInformation}
+                      </ReactMarkdown>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Flow Boxes - Filter to selected if specified */}
+              <div className="space-y-6">
+              {(selectedFlowBoxId 
+                ? flowBoxes?.filter(f => f.id === selectedFlowBoxId) 
+                : flowBoxes
+              )?.map((flowBox, index) => {
                 const boxSteps = groupedSteps[flowBox.id] || [];
                 const completedBoxSteps = boxSteps.filter(step => 
                   (userProgress?.completedSteps as number[])?.includes(step.id)
@@ -415,7 +478,7 @@ export default function GuideViewer() {
                                               data-testid={`button-download-general-${idx}`}
                                             >
                                               <Download className="w-3 h-3" />
-                                              {attachment.name || attachment.type}
+                                              {String(attachment.name || attachment.type)}
                                             </Button>
                                           ))}
                                         </div>
@@ -439,7 +502,7 @@ export default function GuideViewer() {
                                               data-testid={`button-download-faq-${idx}`}
                                             >
                                               <Download className="w-3 h-3" />
-                                              {attachment.name || attachment.type}
+                                              {String(attachment.name || attachment.type)}
                                             </Button>
                                           ))}
                                         </div>
@@ -463,7 +526,7 @@ export default function GuideViewer() {
                                               data-testid={`button-download-other-help-${idx}`}
                                             >
                                               <Download className="w-3 h-3" />
-                                              {attachment.name || attachment.type}
+                                              {String(attachment.name || attachment.type)}
                                             </Button>
                                           ))}
                                         </div>
@@ -487,7 +550,7 @@ export default function GuideViewer() {
                                               data-testid={`button-download-attachment-${idx}`}
                                             >
                                               <Download className="w-3 h-3" />
-                                              {attachment.name || attachment.type}
+                                              {String(attachment.name || attachment.type)}
                                             </Button>
                                           ))}
                                         </div>
@@ -551,7 +614,8 @@ export default function GuideViewer() {
               </CardContent>
             </Card>
           </div>
-        </div>
+          </div>
+        )}
         </div>
       </div>
 
