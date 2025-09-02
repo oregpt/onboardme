@@ -18,13 +18,22 @@ import {
 import { useProjectContext } from "@/components/AppLayout";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId } = useProjectContext();
 
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
+
+  // Get user projects and role for permission checks
+  const { data: projects } = useQuery<Array<{id: number, userRole: string}>>({
+    queryKey: ["/api/projects"], 
+    enabled: isAuthenticated 
+  });
+
+  // For now, use the first project's role (can be enhanced for multi-project context)
+  const userRole = projects?.[0]?.userRole || 'user';
 
   // Filter guides by selected project
   const guides = useMemo(() => {
@@ -71,18 +80,22 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Link href="/admin/1">
-                <Button variant="outline" data-testid="button-admin">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              </Link>
-              <Link href="/editor">
-                <Button data-testid="button-create-guide">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Guide
-                </Button>
-              </Link>
+              {(userRole === 'admin' || user?.isPlatformAdmin) && (
+                <Link href="/admin/1">
+                  <Button variant="outline" data-testid="button-admin">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
+              {(userRole === 'admin' || userRole === 'creator' || user?.isPlatformAdmin) && (
+                <Link href="/editor">
+                  <Button data-testid="button-create-guide">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Guide
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </header>
