@@ -19,7 +19,6 @@ interface StepEditorProps {
 
 export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) {
   const { toast } = useToast();
-  console.log("🚀 StepEditor component mounted for step:", step.id, step.title);
   
   const [stepData, setStepData] = useState({
     title: step.title,
@@ -40,7 +39,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
       isCritical: step.isCritical || false,
       attachments: (step.attachments as any[]) || [],
     });
-  }, [step]);
+  }, [step.id]);
 
   // Handle resizing
   useEffect(() => {
@@ -124,9 +123,8 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
       return await apiRequest("PUT", `/api/steps/${step.id}`, updates);
     },
     onSuccess: () => {
-      // Invalidate specific queries to refresh the step data
-      queryClient.invalidateQueries({ queryKey: ["/api/guides", step.flowBoxId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
+      // Only invalidate the specific step queries to avoid broad refetches
+      queryClient.invalidateQueries({ queryKey: ["/api/guides", "steps"] });
       toast({
         title: "Success",
         description: "Step updated successfully",
@@ -580,6 +578,7 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
 
       <div className="p-4 border-t border-border">
         <Button 
+          type="button"
           onClick={() => {
             console.log("💥 Save button clicked!");
             handleSave();
