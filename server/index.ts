@@ -3,8 +3,15 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+
+// Trust proxy configuration - must be set early for correct IP extraction
+app.set('trust proxy', 1);
+
+// Body size limits to prevent memory exhaustion attacks
+app.use('/api/upload', express.json({ limit: '10mb' }));
+app.use('/api/upload', express.urlencoded({ extended: false, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();

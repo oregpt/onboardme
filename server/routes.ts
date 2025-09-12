@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema, aiSystemPromptUpdateSchema } from "@shared/schema";
 import { AIService, KnowledgeContext, type AIProvider, type ConversationContext } from "./aiService";
 import { z } from "zod";
+import crypto from "crypto";
 
 // Default AI Generator prompt used as fallback
 const DEFAULT_AI_GENERATOR_PROMPT = `Purpose: You are GuideFlow Dialog, a dialog-first onboarding guide builder. Your job is to: (1) discover what the user needs via brief, targeted questions, (2) play back a concise proposed structure, (3) get explicit confirmation, and only then (4) generate the guide using the exact markdown format and rules provided.{CONTEXT}
@@ -124,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return next();
       }
 
-      console.log('🌐 Custom Domain Check:', { hostname, path });
+      console.log('🌐 Custom Domain Check:', { hostname: hostname.substring(0, 20) + (hostname.length > 20 ? '...' : ''), path });
 
       // Get all mappings for this domain and find the best matching prefix
       let mapping = null;
@@ -147,12 +148,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (mapping && mapping.isActive) {
         console.log('🎯 Custom Domain Match:', {
-          domain: hostname,
+          mappingId: mapping.id,
           feature: mapping.feature,
           routeMode: mapping.routeMode,
           projectId: mapping.projectId,
-          guideId: mapping.guideId,
-          pathPrefix: mapping.pathPrefix
+          guideId: mapping.guideId
         });
 
         // Store mapping context in res.locals for use by other routes/middleware
@@ -220,10 +220,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Continue with normal routing
       next();
     } catch (error) {
-      console.error('❌ Error in custom domain middleware:', error);
-      next(); // Continue on error to avoid breaking the app
+      console.error('❌ Error in domain validation');
+      // Don't leak error details that could reveal system internals
+      next();
     }
   });
+
+  // Rate limiting store - in production, use Redis or database
+  interface RateLimitEntry {
+    requests: number;
+    windowStart: number;
+  }
+
+  const rateLimitStore = new Map<string, RateLimitEntry>();
+
+  // Clean up expired entries every 5 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore.entries()) {
+      if (now - entry.windowStart > 60000) { // 1 minute window
+        rateLimitStore.delete(key);
+      }
+    }
+  }, 5 * 60 * 1000);
+
+  // Enhanced security middleware for public endpoints
+  function createSecurityMiddleware() {
+    return (req: any, res: any, next: any) => {
+      // Security headers for public endpoints
+      res.set({
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin'
+      });
+      next();
+    };
+  }
+
+  // Rate limiting middleware with secure key generation
+  function createRateLimit(maxRequests: number, windowMs: number = 60000) {
+    return (req: any, res: any, next: any) => {
+      // Use validated domain mapping ID if available, otherwise fall back to a hash of hostname
+      const mapping = res.locals.domainMapping;
+      const domainKey = mapping?.id ? `mapping-${mapping.id}` : `host-${crypto.createHash('sha256').update(req.hostname).digest('hex').substring(0, 16)}`;
+      
+      // Get real client IP (trust proxy is configured in server/index.ts)
+      const clientIP = req.ip || req.socket.remoteAddress || 'unknown';
+      const key = `${domainKey}:${clientIP}`;
+      
+      const now = Date.now();
+      let entry = rateLimitStore.get(key);
+      
+      if (!entry || now - entry.windowStart > windowMs) {
+        entry = { requests: 1, windowStart: now };
+        rateLimitStore.set(key, entry);
+        return next();
+      }
+      
+      if (entry.requests >= maxRequests) {
+        const retryAfter = Math.ceil((windowMs - (now - entry.windowStart)) / 1000);
+        console.log(`🚫 Rate limit exceeded for ${domainKey}:${clientIP}: ${entry.requests}/${maxRequests} requests`);
+        
+        // Set Retry-After header as per HTTP specification
+        res.set('Retry-After', retryAfter.toString());
+        
+        return res.status(429).json({ 
+          message: "Too many requests. Please wait before sending another message.",
+          retryAfter
+        });
+      }
+      
+      entry.requests++;
+      next();
+    };
+  }
+
+  // Allowed AI providers
+  const ALLOWED_PROVIDERS = ['claude', 'openai', 'xai'];
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -1225,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
 
   // Get public guide by ID (domain-scoped)
-  app.get('/public/guide/:id', async (req, res) => {
+  app.get('/public/guide/:id', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const mapping = res.locals.domainMapping;
@@ -1262,7 +1336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get public guide by slug (domain-scoped)
-  app.get('/public/guide/slug/:slug', async (req, res) => {
+  app.get('/public/guide/slug/:slug', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const slug = req.params.slug;
       const mapping = res.locals.domainMapping;
@@ -1307,7 +1381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get public guide by project and slug (domain-scoped)
-  app.get('/public/guide/:projectId/:slug', async (req, res) => {
+  app.get('/public/guide/:projectId/:slug', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const slug = req.params.slug;
@@ -1344,7 +1418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all public guides for a project (domain-scoped)
-  app.get('/public/guides/project/:projectId', async (req, res) => {
+  app.get('/public/guides/project/:projectId', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const mapping = res.locals.domainMapping;
@@ -1374,7 +1448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get flow boxes for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/flowboxes', async (req, res) => {
+  app.get('/public/guides/:guideId/flowboxes', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1410,7 +1484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get steps for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/steps', async (req, res) => {
+  app.get('/public/guides/:guideId/steps', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1446,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Q&A for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/qa', async (req, res) => {
+  app.get('/public/guides/:guideId/qa', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1482,7 +1556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get knowledge base for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/knowledge', async (req, res) => {
+  app.get('/public/guides/:guideId/knowledge', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1518,7 +1592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public AI Chat endpoint (for custom domains) - domain-scoped
-  app.post('/public/ai/chat', async (req, res) => {
+  app.post('/public/ai/chat', createSecurityMiddleware(), createRateLimit(30), async (req, res) => {
     try {
       const { message, provider, guideId, flowBoxId, stepId } = req.body;
       const mapping = res.locals.domainMapping;
@@ -1527,9 +1601,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields" });
       }
 
+      // Validate message size (max 4KB)
+      if (typeof message !== 'string' || message.length > 4096) {
+        return res.status(400).json({ message: "Message too long. Maximum 4096 characters allowed." });
+      }
+
+      // Validate provider allowlist
+      if (provider && !ALLOWED_PROVIDERS.includes(provider)) {
+        return res.status(400).json({ message: "Invalid provider. Allowed providers: claude, openai, xai" });
+      }
+
       // Ensure we have domain mapping context and chat feature is enabled
       if (!mapping || (mapping.feature !== 'chat' && mapping.feature !== 'both')) {
         return res.status(404).json({ message: "Chat not available" });
+      }
+
+      // Enforce domain verification for production security
+      if (!mapping.verifiedAt) {
+        return res.status(403).json({ message: "Domain not verified. Please verify your domain through the admin panel." });
       }
 
       // Verify guide is public
