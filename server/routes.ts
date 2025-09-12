@@ -706,12 +706,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         agentInstructions: null
       };
 
-      // Generate AI response using existing generateResponse method
-      const response = await AIService.generateResponse(
-        completeMessages,
-        dummyContext,
-        'anthropic'
-      );
+      // Generate AI response using Claude directly to preserve the AI Generator prompt
+      const response = await AIService.callAnthropic(completeMessages);
 
       res.json({
         success: true,

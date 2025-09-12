@@ -322,7 +322,7 @@ export class AIService {
   }
 
   // Anthropic Claude implementation
-  private static async callAnthropic(messages: ChatMessage[]): Promise<AIResponse> {
+  public static async callAnthropic(messages: ChatMessage[]): Promise<AIResponse> {
     // Extract system message and user messages
     const systemMessage = messages.find(m => m.role === 'system')?.content || '';
     const conversationMessages = messages.filter(m => m.role !== 'system');
