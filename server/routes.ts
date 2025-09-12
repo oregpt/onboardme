@@ -710,7 +710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = await AIService.generateResponse(
         completeMessages,
         dummyContext,
-        'openai'
+        'anthropic'
       );
 
       res.json({
