@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema } from "@shared/schema";
+import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema, aiSystemPromptUpdateSchema } from "@shared/schema";
 import { AIService, KnowledgeContext, type AIProvider, type ConversationContext } from "./aiService";
 import { z } from "zod";
 
@@ -1340,6 +1340,64 @@ Operational Prompts You Use:
     } catch (error) {
       console.error("Export error:", error);
       res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
+  // Platform configuration routes - AI system prompt management
+  app.get('/api/admin/config/ai-system-prompt', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can access config
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      const config = await storage.getPlatformConfig('ai_system_prompt');
+      res.json({
+        prompt: config?.value || '',
+        updatedAt: config?.updatedAt,
+        updatedBy: config?.updatedBy
+      });
+    } catch (error) {
+      console.error("Error fetching AI system prompt config:", error);
+      res.status(500).json({ message: "Failed to fetch AI system prompt configuration" });
+    }
+  });
+
+  app.put('/api/admin/config/ai-system-prompt', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can update config
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      // Validate request body
+      const validationResult = aiSystemPromptUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { prompt } = validationResult.data;
+      
+      // Update the configuration
+      const config = await storage.setPlatformConfig('ai_system_prompt', prompt, userId);
+      
+      res.json({
+        prompt: config.value,
+        updatedAt: config.updatedAt,
+        updatedBy: config.updatedBy
+      });
+    } catch (error) {
+      console.error("Error updating AI system prompt config:", error);
+      res.status(500).json({ message: "Failed to update AI system prompt configuration" });
     }
   });
 
