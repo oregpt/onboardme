@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export default function SimpleLanding() {
-  const handleATXPGuides = () => {
-    window.location.href = "/api/login?flow=atxp";
+  const handleCantyAIGuides = () => {
+    window.location.href = "/api/login?flow=cantyai";
   };
 
   const handleOtherGuides = () => {
@@ -30,12 +30,12 @@ export default function SimpleLanding() {
         {/* Three Buttons */}
         <div className="space-y-4">
           <Button
-            onClick={handleATXPGuides}
+            onClick={handleCantyAIGuides}
             variant="outline"
             className="w-full h-14 text-lg font-medium bg-blue-50/50 hover:bg-blue-100/70 border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-200"
-            data-testid="button-atxp-guides"
+            data-testid="button-cantyai-guides"
           >
-            Access ATXP Guides
+            Access CantyAI Guides
           </Button>
 
           <Button

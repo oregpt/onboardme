@@ -130,6 +130,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       switch (flow) {
+        case 'cantyai':
+          // Add user to Project 3 (CantyAI Guides) as a user if not already a member
+          try {
+            const existingRole = await storage.getUserProjectRole(userId, 3);
+            if (!existingRole) {
+              await storage.addProjectMember(3, userId, 'user');
+            }
+            return res.redirect('/project/3');
+          } catch (error) {
+            console.error('Error adding user to CantyAI project:', error);
+            return res.redirect('/');
+          }
+
         case 'atxp':
           // Add user to Project 1 as a user if not already a member
           try {
