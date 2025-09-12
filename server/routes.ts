@@ -185,18 +185,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (mapping.routeMode === 'single_guide') {
             // Single guide mode - redirect to specific guide
             if (mapping.guideId && internalPath === '/') {
-              console.log('📖 Single guide mode - redirecting to guide', mapping.guideId);
-              return res.redirect(`/public/guide/${mapping.guideId}`);
+              console.log('📖 Single guide mode - redirecting to white-label guide', mapping.guideId);
+              return res.redirect(`/white-label/guide/${mapping.guideId}`);
             } else if (mapping.defaultGuideSlug && internalPath === '/') {
               // Redirect to default guide by slug
-              console.log('📖 Single guide mode - redirecting to default guide slug');
-              return res.redirect(`/public/guide/slug/${mapping.defaultGuideSlug}`);
+              console.log('📖 Single guide mode - redirecting to white-label guide by slug');
+              return res.redirect(`/white-label/guide/slug/${mapping.defaultGuideSlug}`);
             }
           } else if (mapping.routeMode === 'project_guides') {
-            // Project guides mode - show guide list or specific guide
+            // Project guides mode - show white-label interface
             if (internalPath === '/' && mapping.projectId) {
-              console.log('📚 Project guides mode - redirecting to guide list');
-              return res.redirect(`/public/guides/project/${mapping.projectId}`);
+              console.log('📚 Project guides mode - redirecting to white-label interface');
+              return res.redirect(`/white-label/project/${mapping.projectId}`);
             }
             
             // Handle guide slug routing for project guides (only single segment, no dots, HTML requests)
@@ -1784,6 +1784,155 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==========================================
   // END ADMIN API ENDPOINTS
+  // ==========================================
+
+  // ==========================================
+  // WHITE-LABEL ROUTES
+  // Serve brandless white-label components for custom domains
+  // ==========================================
+
+  // White-label project guides interface
+  app.get('/white-label/project/:projectId', async (req, res) => {
+    const projectId = parseInt(req.params.projectId);
+    const mapping = res.locals.domainMapping;
+    
+    // Ensure domain mapping context exists
+    if (!mapping) {
+      return res.status(404).send('Not found');
+    }
+    
+    // Serve white-label HTML with project guides
+    const theme = mapping.theme || {};
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guides</title>
+    <style>
+        :root {
+            --primary: ${theme.primary || '#3b82f6'};
+            --secondary: ${theme.secondary || '#f3f4f6'};
+            --background: ${theme.background || '#ffffff'};
+            --text: ${theme.text || '#1f2937'};
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+        }
+        .white-label-container {
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root" class="white-label-container">
+        <div data-white-label-project="${projectId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
+    </div>
+    <script type="module" src="/src/white-label-entry.tsx"></script>
+</body>
+</html>`;
+    res.send(html);
+  });
+
+  // White-label single guide interface
+  app.get('/white-label/guide/:guideId', async (req, res) => {
+    const guideId = parseInt(req.params.guideId);
+    const mapping = res.locals.domainMapping;
+    
+    if (!mapping) {
+      return res.status(404).send('Not found');
+    }
+    
+    const theme = mapping.theme || {};
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide</title>
+    <style>
+        :root {
+            --primary: ${theme.primary || '#3b82f6'};
+            --secondary: ${theme.secondary || '#f3f4f6'};
+            --background: ${theme.background || '#ffffff'};
+            --text: ${theme.text || '#1f2937'};
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+        }
+        .white-label-container {
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root" class="white-label-container">
+        <div data-white-label-guide="${guideId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
+    </div>
+    <script type="module" src="/src/white-label-entry.tsx"></script>
+</body>
+</html>`;
+    res.send(html);
+  });
+
+  // White-label guide by slug interface
+  app.get('/white-label/guide/slug/:slug', async (req, res) => {
+    const slug = req.params.slug;
+    const mapping = res.locals.domainMapping;
+    
+    if (!mapping) {
+      return res.status(404).send('Not found');
+    }
+    
+    const theme = mapping.theme || {};
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide</title>
+    <style>
+        :root {
+            --primary: ${theme.primary || '#3b82f6'};
+            --secondary: ${theme.secondary || '#f3f4f6'};
+            --background: ${theme.background || '#ffffff'};
+            --text: ${theme.text || '#1f2937'};
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segree UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+        }
+        .white-label-container {
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root" class="white-label-container">
+        <div data-white-label-slug="${slug}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}' data-project-id="${mapping.projectId}"></div>
+    </div>
+    <script type="module" src="/src/white-label-entry.tsx"></script>
+</body>
+</html>`;
+    res.send(html);
+  });
+
+  // ==========================================
+  // END WHITE-LABEL ROUTES
   // ==========================================
 
   // AI Chat endpoint
