@@ -103,6 +103,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
+  // Custom domain routing middleware
+  app.use(async (req, res, next) => {
+    try {
+      const hostname = req.hostname;
+      const path = req.path;
+      const acceptHeader = req.headers.accept || '';
+
+      // Skip API routes and asset/HMR paths - let them be handled directly
+      if (path.startsWith('/api/') || 
+          path.startsWith('/assets/') || 
+          path.startsWith('/@vite/') || 
+          path.startsWith('/@react-refresh/') ||
+          path.startsWith('/favicon.ico') ||
+          path.startsWith('/robots.txt') ||
+          path.startsWith('/manifest.webmanifest') ||
+          path.includes('.') || // Any path with file extension
+          (req.method === 'GET' && !acceptHeader.includes('text/html'))) {
+        return next();
+      }
+
+      console.log('🌐 Custom Domain Check:', { hostname, path });
+
+      // Get all mappings for this domain and find the best matching prefix
+      let mapping = null;
+      const allMappingsForDomain = await storage.getCustomDomainMappings();
+      const domainMappings = allMappingsForDomain.filter(m => 
+        m.domain === hostname && m.isActive
+      );
+
+      // Sort by pathPrefix length (longest first) for best match
+      domainMappings.sort((a, b) => (b.pathPrefix?.length || 1) - (a.pathPrefix?.length || 1));
+      
+      // Find the first mapping whose pathPrefix matches the request path
+      for (const candidateMapping of domainMappings) {
+        const pathPrefix = candidateMapping.pathPrefix || '/';
+        if (path.startsWith(pathPrefix)) {
+          mapping = candidateMapping;
+          break;
+        }
+      }
+      
+      if (mapping && mapping.isActive) {
+        console.log('🎯 Custom Domain Match:', {
+          domain: hostname,
+          feature: mapping.feature,
+          routeMode: mapping.routeMode,
+          projectId: mapping.projectId,
+          guideId: mapping.guideId,
+          pathPrefix: mapping.pathPrefix
+        });
+
+        // Store mapping context in res.locals for use by other routes/middleware
+        res.locals.domainMapping = mapping;
+
+        // Calculate internal path by removing the path prefix
+        const pathPrefix = mapping.pathPrefix || '/';
+        let internalPath = path;
+        if (pathPrefix !== '/' && path.startsWith(pathPrefix)) {
+          internalPath = path.substring(pathPrefix.length) || '/';
+          if (!internalPath.startsWith('/')) {
+            internalPath = '/' + internalPath;
+          }
+        }
+
+        console.log('🔀 Path mapping:', { originalPath: path, pathPrefix, internalPath });
+
+        // Handle different routing scenarios based on internal path
+        if (mapping.feature === 'chat') {
+          // For chat-only domains, redirect to chat interface only from root
+          if (internalPath === '/') {
+            const pathPrefix = mapping.pathPrefix || '/';
+            const chatPath = pathPrefix === '/' ? '/chat' : `${pathPrefix}/chat`;
+            console.log('📞 Chat domain - redirecting to chat interface:', chatPath);
+            return res.redirect(chatPath);
+          }
+          // If already on a chat path, let it continue normally
+        } 
+        
+        if (mapping.feature === 'guides' || mapping.feature === 'both') {
+          if (mapping.routeMode === 'single_guide') {
+            // Single guide mode - redirect to specific guide
+            if (mapping.guideId && internalPath === '/') {
+              console.log('📖 Single guide mode - redirecting to guide', mapping.guideId);
+              return res.redirect(`/public/guide/${mapping.guideId}`);
+            } else if (mapping.defaultGuideSlug && internalPath === '/') {
+              // Redirect to default guide by slug
+              console.log('📖 Single guide mode - redirecting to default guide slug');
+              return res.redirect(`/public/guide/slug/${mapping.defaultGuideSlug}`);
+            }
+          } else if (mapping.routeMode === 'project_guides') {
+            // Project guides mode - show guide list or specific guide
+            if (internalPath === '/' && mapping.projectId) {
+              console.log('📚 Project guides mode - redirecting to guide list');
+              return res.redirect(`/public/guides/project/${mapping.projectId}`);
+            }
+            
+            // Handle guide slug routing for project guides (only single segment, no dots, HTML requests)
+            const guideSlugMatch = internalPath.match(/^\/([a-z0-9-]+)$/);
+            if (guideSlugMatch && mapping.projectId && acceptHeader.includes('text/html')) {
+              const slug = guideSlugMatch[1];
+              // Additional check: ensure it's not an asset-like path
+              if (!slug.includes('.') && !['assets', 'vite', 'favicon', 'robots', 'manifest'].some(asset => slug.startsWith(asset))) {
+                console.log('📖 Project guides mode - redirecting to specific guide:', slug);
+                return res.redirect(`/public/guide/${mapping.projectId}/${slug}`);
+              }
+            }
+          }
+        }
+
+        // If we have a domain mapping but didn't match specific routes, continue
+        console.log('⚡ Custom domain matched but no specific route handled - continuing');
+      }
+
+      // Continue with normal routing
+      next();
+    } catch (error) {
+      console.error('❌ Error in custom domain middleware:', error);
+      next(); // Continue on error to avoid breaking the app
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -703,6 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: null,
         slug: 'new-guide',
         isActive: true,
+        isPublic: true,
         createdAt: new Date(),
         updatedAt: null,
         projectId: null,
