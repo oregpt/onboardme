@@ -1218,6 +1218,406 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // PUBLIC API ENDPOINTS (No Auth Required)
+  // For custom domain embedding
+  // ==========================================
+
+  // Get public guide by ID (domain-scoped)
+  app.get('/public/guide/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      const guide = await storage.getGuide(id);
+      
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        // Single guide mode: only allow the specific guide ID
+        if (mapping.guideId && id !== mapping.guideId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        // Project guides mode: only allow guides from the mapped project
+        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      }
+      
+      res.json(guide);
+    } catch (error) {
+      console.error("Error fetching public guide:", error);
+      res.status(500).json({ message: "Failed to fetch guide" });
+    }
+  });
+
+  // Get public guide by slug (domain-scoped)
+  app.get('/public/guide/slug/:slug', async (req, res) => {
+    try {
+      const slug = req.params.slug;
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      let guide: Guide | undefined;
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        // Single guide mode: must match defaultGuideSlug AND guideId
+        if (!mapping.defaultGuideSlug || slug !== mapping.defaultGuideSlug) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+        // Get the guide and verify it matches the mapping's guideId
+        guide = await storage.getGuide(mapping.guideId);
+        if (!guide || guide.slug !== slug) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        // Project guides mode: scope lookup to the mapped project
+        if (!mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+        guide = await storage.getGuideBySlug(slug, mapping.projectId);
+      } else {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      res.json(guide);
+    } catch (error) {
+      console.error("Error fetching public guide by slug:", error);
+      res.status(500).json({ message: "Failed to fetch guide" });
+    }
+  });
+
+  // Get public guide by project and slug (domain-scoped)
+  app.get('/public/guide/:projectId/:slug', async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const slug = req.params.slug;
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // Enforce domain scoping: only allow access to guides from the mapped project
+      if (mapping.routeMode !== 'project_guides' || 
+          !mapping.projectId || 
+          projectId !== mapping.projectId) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      const guides = await storage.getGuides();
+      const guide = guides.find(g => 
+        g.projectId === projectId && 
+        g.slug === slug && 
+        g.isPublic
+      );
+      
+      if (!guide) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      res.json(guide);
+    } catch (error) {
+      console.error("Error fetching public guide by project and slug:", error);
+      res.status(500).json({ message: "Failed to fetch guide" });
+    }
+  });
+
+  // Get all public guides for a project (domain-scoped)
+  app.get('/public/guides/project/:projectId', async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guides not available" });
+      }
+      
+      // Enforce domain scoping: only allow access to guides from the mapped project
+      if (mapping.routeMode !== 'project_guides' || 
+          !mapping.projectId || 
+          projectId !== mapping.projectId) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      const guides = await storage.getGuides();
+      const publicGuides = guides.filter(g => 
+        g.projectId === projectId && g.isPublic
+      );
+      
+      res.json(publicGuides);
+    } catch (error) {
+      console.error("Error fetching public guides for project:", error);
+      res.status(500).json({ message: "Failed to fetch guides" });
+    }
+  });
+
+  // Get flow boxes for public guide (domain-scoped)
+  app.get('/public/guides/:guideId/flowboxes', async (req, res) => {
+    try {
+      const guideId = parseInt(req.params.guideId);
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // Verify guide is public
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        if (mapping.guideId && guideId !== mapping.guideId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      }
+      
+      const flowBoxes = await storage.getFlowBoxesByGuide(guideId);
+      res.json(flowBoxes);
+    } catch (error) {
+      console.error("Error fetching public guide flow boxes:", error);
+      res.status(500).json({ message: "Failed to fetch flow boxes" });
+    }
+  });
+
+  // Get steps for public guide (domain-scoped)
+  app.get('/public/guides/:guideId/steps', async (req, res) => {
+    try {
+      const guideId = parseInt(req.params.guideId);
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // Verify guide is public
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        if (mapping.guideId && guideId !== mapping.guideId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      }
+      
+      const steps = await storage.getStepsByGuide(guideId);
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching public guide steps:", error);
+      res.status(500).json({ message: "Failed to fetch steps" });
+    }
+  });
+
+  // Get Q&A for public guide (domain-scoped)
+  app.get('/public/guides/:guideId/qa', async (req, res) => {
+    try {
+      const guideId = parseInt(req.params.guideId);
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // Verify guide is public
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        if (mapping.guideId && guideId !== mapping.guideId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      }
+      
+      const conversations = await storage.getQAByGuide(guideId);
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching public guide Q&A:", error);
+      res.status(500).json({ message: "Failed to fetch Q&A" });
+    }
+  });
+
+  // Get knowledge base for public guide (domain-scoped)
+  app.get('/public/guides/:guideId/knowledge', async (req, res) => {
+    try {
+      const guideId = parseInt(req.params.guideId);
+      const mapping = res.locals.domainMapping;
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // Verify guide is public
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        if (mapping.guideId && guideId !== mapping.guideId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      }
+      
+      const knowledge = await storage.getKnowledgeByGuide(guideId);
+      res.json(knowledge);
+    } catch (error) {
+      console.error("Error fetching public guide knowledge:", error);
+      res.status(500).json({ message: "Failed to fetch knowledge base" });
+    }
+  });
+
+  // Public AI Chat endpoint (for custom domains) - domain-scoped
+  app.post('/public/ai/chat', async (req, res) => {
+    try {
+      const { message, provider, guideId, flowBoxId, stepId } = req.body;
+      const mapping = res.locals.domainMapping;
+      
+      if (!message || !guideId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Ensure we have domain mapping context and chat feature is enabled
+      if (!mapping || (mapping.feature !== 'chat' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Chat not available" });
+      }
+
+      // Verify guide is public
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found or not public" });
+      }
+      
+      // Enforce domain scoping based on route mode
+      if (mapping.routeMode === 'single_guide') {
+        if (mapping.guideId && guideId !== mapping.guideId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      } else if (mapping.routeMode === 'project_guides') {
+        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
+      }
+
+      // Get all required data for context
+      const allSteps = await storage.getStepsByGuide(guideId);
+
+      // Handle "All flows" selection or specific flow/step
+      let flowBox = null;
+      let currentStep = null;
+
+      if (flowBoxId && stepId) {
+        flowBox = await storage.getFlowBox(flowBoxId);
+        currentStep = await storage.getStep(stepId);
+        
+        if (!flowBox || !currentStep) {
+          return res.status(404).json({ message: "Flow box or step not found" });
+        }
+      }
+
+      // Categorize attachments from all steps
+      const allAttachments = allSteps.flatMap(step => 
+        (step.attachments as any[]) || []
+      );
+      
+      const generalFiles = allAttachments.filter(att => att.category === 'general');
+      const faqFiles = allAttachments.filter(att => att.category === 'faq');
+      const otherHelpFiles = allAttachments.filter(att => att.category === 'other-help');
+
+      // Build knowledge context (same as private endpoint but without userId)
+      const context: KnowledgeContext = {
+        guide,
+        flowBox,
+        currentStep,
+        allSteps,
+        generalFiles,
+        faqFiles,
+        otherHelpFiles
+      };
+
+      // Get AI assistant prompt from environment or default
+      const assistantPrompt = process.env.AI_ASSISTANT_PROMPT || 
+        `You are a helpful assistant for the "${guide.title}" guide. 
+         Help users with questions about the content and provide step-by-step guidance.
+         Be friendly, concise, and focus on actionable advice.`;
+
+      const response = await aiService.generateChatResponse(
+        assistantPrompt,
+        message,
+        provider || 'claude',
+        context
+      );
+
+      // Save Q&A without user info for public endpoints
+      await storage.createQAEntry({
+        guideId,
+        question: message,
+        answer: response,
+        userId: null,
+        flowBoxId: flowBoxId || null,
+        stepId: stepId || null
+      });
+
+      res.json({ response });
+    } catch (error) {
+      console.error("Error in public AI chat:", error);
+      res.status(500).json({ message: "Failed to process chat request" });
+    }
+  });
+
+  // ==========================================
+  // END PUBLIC API ENDPOINTS
+  // ==========================================
+
   // AI Chat endpoint
   app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
     try {
