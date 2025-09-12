@@ -1223,7 +1223,8 @@ function CustomDomainMappings() {
     mutationFn: async (id: number) => {
       return await apiRequest("POST", `/api/admin/custom-domains/${id}/verify-dns`);
     },
-    onSuccess: (data) => {
+    onSuccess: async (response) => {
+      const data = await response.json();
       queryClient.invalidateQueries({ queryKey: ["/api/admin/custom-domains"] });
       toast({
         title: data.verified ? "Success" : "Warning",
