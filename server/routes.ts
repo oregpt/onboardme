@@ -110,11 +110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const path = req.path;
       const acceptHeader = req.headers.accept || '';
 
-      // Skip API routes and asset/HMR paths - let them be handled directly
+      // Skip API routes, asset/HMR paths, and white-label routes - let them be handled directly
       if (path.startsWith('/api/') || 
           path.startsWith('/assets/') || 
           path.startsWith('/@vite/') || 
           path.startsWith('/@react-refresh/') ||
+          path.startsWith('/white-label/') || // Skip white-label routes to prevent double processing
           path.startsWith('/favicon.ico') ||
           path.startsWith('/robots.txt') ||
           path.startsWith('/manifest.webmanifest') ||

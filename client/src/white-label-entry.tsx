@@ -1,20 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import WhiteLabelLayout from '@/components/WhiteLabelLayout';
-import WhiteLabelGuideViewer from '@/components/WhiteLabelGuideViewer';
-import WhiteLabelChat from '@/components/WhiteLabelChat';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { WhiteLabelLayout } from '@/components/WhiteLabelLayout';
+import { WhiteLabelGuideViewer } from '@/components/WhiteLabelGuideViewer';
+import { queryClient } from '@/lib/queryClient';
 import '@/index.css';
-
-// Create a query client for the white-label interface
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 // White-label app component
 function WhiteLabelApp() {
@@ -28,7 +18,10 @@ function WhiteLabelApp() {
   const projectId = container.getAttribute('data-white-label-project');
   const guideId = container.getAttribute('data-white-label-guide');
   const slug = container.getAttribute('data-white-label-slug');
-  const features = container.getAttribute('data-features') as 'chat' | 'guides' | 'both';
+  const rawFeatures = container.getAttribute('data-features');
+  const features = (rawFeatures === 'chat' || rawFeatures === 'guides' || rawFeatures === 'both') 
+    ? rawFeatures as 'chat' | 'guides' | 'both' 
+    : 'both';
   const themeData = container.getAttribute('data-theme');
   
   let theme = {};
@@ -54,52 +47,38 @@ function WhiteLabelApp() {
   let content;
   
   if (projectId) {
-    // Project guides mode - show guide list with optional chat
+    // Project guides mode - WhiteLabelGuideViewer handles both guides and chat
     content = (
       <div className="white-label-container">
-        {features === 'guides' || features === 'both' ? (
-          <WhiteLabelGuideViewer projectId={parseInt(projectId)} />
-        ) : null}
-        
-        {features === 'chat' || features === 'both' ? (
-          <div className="mt-6">
-            <WhiteLabelChat />
-          </div>
-        ) : null}
+        <WhiteLabelGuideViewer 
+          projectId={parseInt(projectId)} 
+          features={features}
+          theme={theme}
+        />
       </div>
     );
   } else if (guideId) {
-    // Single guide mode
+    // Single guide mode - WhiteLabelGuideViewer handles both guides and chat
     content = (
       <div className="white-label-container">
-        {features === 'guides' || features === 'both' ? (
-          <WhiteLabelGuideViewer guideId={parseInt(guideId)} />
-        ) : null}
-        
-        {features === 'chat' || features === 'both' ? (
-          <div className="mt-6">
-            <WhiteLabelChat />
-          </div>
-        ) : null}
+        <WhiteLabelGuideViewer 
+          guideId={parseInt(guideId)} 
+          features={features}
+          theme={theme}
+        />
       </div>
     );
   } else if (slug) {
-    // Guide by slug mode
+    // Guide by slug mode - WhiteLabelGuideViewer handles both guides and chat
     const projectIdFromAttr = container.getAttribute('data-project-id');
     content = (
       <div className="white-label-container">
-        {features === 'guides' || features === 'both' ? (
-          <WhiteLabelGuideViewer 
-            guideSlug={slug} 
-            projectId={projectIdFromAttr ? parseInt(projectIdFromAttr) : undefined}
-          />
-        ) : null}
-        
-        {features === 'chat' || features === 'both' ? (
-          <div className="mt-6">
-            <WhiteLabelChat />
-          </div>
-        ) : null}
+        <WhiteLabelGuideViewer 
+          guideSlug={slug} 
+          projectId={projectIdFromAttr ? parseInt(projectIdFromAttr) : undefined}
+          features={features}
+          theme={theme}
+        />
       </div>
     );
   } else {

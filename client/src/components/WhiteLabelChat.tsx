@@ -26,6 +26,7 @@ interface WhiteLabelChatProps {
   allFlowBoxes: FlowBox[];
   isOpen: boolean;
   onToggle: () => void;
+  closable?: boolean;
   theme?: {
     primary?: string;
     secondary?: string;
@@ -49,6 +50,7 @@ export function WhiteLabelChat({
   allFlowBoxes, 
   isOpen, 
   onToggle,
+  closable = true,
   theme 
 }: WhiteLabelChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -146,14 +148,16 @@ export function WhiteLabelChat({
           >
             {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggle}
-            className="h-8 w-8 p-0 hover:bg-gray-100"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          {closable && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggle}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
 
