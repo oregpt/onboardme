@@ -147,6 +147,21 @@ export class KnowledgeBaseService {
   }
 }
 
+// Default AI system prompt used as fallback
+const DEFAULT_AI_SYSTEM_PROMPT = `You are an AI assistant helping users with an onboarding guide. You have access to the complete guide content, step information, and attached files.
+
+Use this context to answer questions accurately:
+
+{CONTEXT}
+
+Guidelines:
+- Always base your answers on the provided context
+- Reference specific steps, files, or guide sections when relevant
+- If asked about files, mention which category they belong to (General, FAQ, or Other Help)
+- Be helpful and provide actionable guidance
+- If you don't have enough information in the context, say so clearly
+- Keep responses concise but comprehensive`;
+
 // AI Service class
 export class AIService {
   // Generate AI response using specified provider
@@ -158,22 +173,28 @@ export class AIService {
   ): Promise<AIResponse> {
     const contextText = KnowledgeBaseService.buildContext(context);
     
-    // Build system message with context
+    // Get configurable prompt from database or use default
+    let promptTemplate = DEFAULT_AI_SYSTEM_PROMPT;
+    if (conversationContext?.storage) {
+      try {
+        const config = await conversationContext.storage.getPlatformConfig('ai_system_prompt');
+        if (config?.value?.trim()) {
+          promptTemplate = config.value;
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI system prompt config, using default:', error);
+      }
+    }
+    
+    // Replace context placeholder in the prompt template
+    const promptContent = promptTemplate.includes('{CONTEXT}') 
+      ? promptTemplate.replace('{CONTEXT}', contextText)
+      : `${promptTemplate}\n\n${contextText}`;
+    
+    // Build system message with configurable prompt and context
     const systemMessage: ChatMessage = {
       role: 'system',
-      content: `You are an AI assistant helping users with an onboarding guide. You have access to the complete guide content, step information, and attached files.
-
-Use this context to answer questions accurately:
-
-${contextText}
-
-Guidelines:
-- Always base your answers on the provided context
-- Reference specific steps, files, or guide sections when relevant
-- If asked about files, mention which category they belong to (General, FAQ, or Other Help)
-- Be helpful and provide actionable guidance
-- If you don't have enough information in the context, say so clearly
-- Keep responses concise but comprehensive`
+      content: promptContent
     };
 
     const allMessages = [systemMessage, ...messages];
