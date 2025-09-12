@@ -842,14 +842,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/steps/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const updates = req.body;
+      console.log(`PUT /api/steps/${id} - Received update request:`, req.body);
+      
+      // Validate the request body
+      const updateStepSchema = insertStepSchema.partial();
+      const updates = updateStepSchema.parse(req.body);
+      
       const step = await storage.updateStep(id, updates);
       if (!step) {
+        console.log(`PUT /api/steps/${id} - Step not found`);
         return res.status(404).json({ message: "Step not found" });
       }
+      
+      console.log(`PUT /api/steps/${id} - Step updated successfully:`, step.title);
       res.json(step);
     } catch (error) {
       console.error("Error updating step:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid step data", errors: error.errors });
+      }
       res.status(500).json({ message: "Failed to update step" });
     }
   });

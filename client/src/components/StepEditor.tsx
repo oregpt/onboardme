@@ -122,6 +122,8 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
       return await apiRequest("PUT", `/api/steps/${step.id}`, updates);
     },
     onSuccess: () => {
+      // Invalidate specific queries to refresh the step data
+      queryClient.invalidateQueries({ queryKey: ["/api/guides", step.flowBoxId] });
       queryClient.invalidateQueries({ queryKey: ["/api/guides"] });
       toast({
         title: "Success",

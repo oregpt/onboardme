@@ -12,6 +12,8 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  console.log(`API Request: ${method} ${url}`, data ? data : 'no body');
+  
   const res = await fetch(url, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
@@ -19,7 +21,15 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  // Ensure we're getting JSON responses for API calls
+  const contentType = res.headers.get('content-type');
+  if (res.ok && !contentType?.includes('application/json')) {
+    console.error(`API call returned HTML instead of JSON: ${method} ${url}`);
+    throw new Error(`Server returned HTML instead of JSON - route may not exist`);
+  }
+
   await throwIfResNotOk(res);
+  console.log(`API Response: ${method} ${url} - ${res.status}`);
   return res;
 }
 
