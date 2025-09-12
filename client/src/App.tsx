@@ -15,6 +15,7 @@ import Guides from "@/pages/Guides";
 import UserProgress from "@/pages/UserProgress";
 import MyProgress from "@/pages/MyProgress";
 import Chat from "@/pages/Chat";
+import AIGuideGenerator from "@/pages/AIGuideGenerator";
 import Admin from "@/pages/Admin";
 import DatabaseManagement from "@/pages/DatabaseManagement";
 
@@ -44,6 +45,7 @@ function Router() {
             <Route path="/project/:projectId" component={ProjectDashboard} />
             <Route path="/guides" component={Guides} />
             <Route path="/chat" component={Chat} />
+            <Route path="/ai-generator" component={AIGuideGenerator} />
             <Route path="/my-progress" component={MyProgress} />
             <Route path="/users" component={UserProgress} />
             <Route path="/admin/:projectId" component={Admin} />

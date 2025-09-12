@@ -12,7 +12,8 @@ import {
   User,
   Settings,
   TrendingUp,
-  MessageCircle
+  MessageCircle,
+  Sparkles
 } from "lucide-react";
 
 interface SidebarProps {
@@ -40,6 +41,7 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
     const baseItems = [
       { href: "/guides", icon: Book, label: "Guides" },
       { href: "/chat", icon: MessageCircle, label: "Chat" },
+      { href: "/ai-generator", icon: Sparkles, label: "AI Generator" },
       { href: "/my-progress", icon: TrendingUp, label: "My Progress" }
     ];
 
