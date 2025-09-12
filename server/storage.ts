@@ -10,6 +10,7 @@ import {
   projectMembers,
   conversationHistory,
   stepComments,
+  platformConfigs,
   type User,
   type UpsertUser,
   type Project,
@@ -32,6 +33,8 @@ import {
   type InsertConversationHistory,
   type StepComment,
   type InsertStepComment,
+  type PlatformConfig,
+  type InsertPlatformConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
@@ -106,6 +109,10 @@ export interface IStorage {
   getStepComments(stepId: number): Promise<StepComment[]>;
   updateStepComment(id: number, updates: Partial<InsertStepComment>): Promise<StepComment | undefined>;
   deleteStepComment(id: number): Promise<boolean>;
+  
+  // Platform configuration operations
+  getPlatformConfig(key: string): Promise<PlatformConfig | undefined>;
+  setPlatformConfig(key: string, value: string, updatedBy?: string): Promise<PlatformConfig>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -315,7 +322,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
-  async getAllProjects() {
+  async getAllProjectsForExport() {
     return await db.select().from(projects);
   }
 
@@ -729,6 +736,33 @@ export class DatabaseStorage implements IStorage {
   async deleteStepComment(id: number): Promise<boolean> {
     const result = await db.delete(stepComments).where(eq(stepComments.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // Platform configuration operations
+  async getPlatformConfig(key: string): Promise<PlatformConfig | undefined> {
+    const [config] = await db.select().from(platformConfigs).where(eq(platformConfigs.key, key));
+    return config;
+  }
+
+  async setPlatformConfig(key: string, value: string, updatedBy?: string): Promise<PlatformConfig> {
+    const [config] = await db
+      .insert(platformConfigs)
+      .values({
+        key,
+        value,
+        updatedBy,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: platformConfigs.key,
+        set: {
+          value,
+          updatedBy,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return config;
   }
 
   async getDetailedUserProgress(): Promise<any[]> {
