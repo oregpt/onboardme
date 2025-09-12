@@ -1172,7 +1172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('🔄 Starting database import...');
       let importedTables = 0;
       let totalRecords = 0;
-      const results = {};
+      const results: Record<string, any> = {};
 
       // Import tables in dependency order
       const importOrder = [
@@ -1268,7 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     .insert(tableSchema)
                     .values(record)
                     .onConflictDoUpdate({
-                      target: tableSchema[primaryKey],
+                      target: (tableSchema as any)[primaryKey],
                       set: record
                     });
                 } catch (insertError) {

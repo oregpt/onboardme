@@ -69,8 +69,10 @@ export default function Admin() {
   const [newMemberRole, setNewMemberRole] = useState("user");
   const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
   const [activeTab, setActiveTab] = useState("projects");
+  const [editingAiAssistant, setEditingAiAssistant] = useState(false);
+  const [editingAiGenerator, setEditingAiGenerator] = useState(false);
 
-  // AI System Prompt validation schema
+  // AI Prompt validation schema
   const aiPromptSchema = z.object({
     prompt: z.string().min(1, "Prompt is required").max(20000, "Prompt too long")
   });
@@ -93,7 +95,13 @@ export default function Admin() {
     enabled: !!(isAuthenticated && user?.isPlatformAdmin),
   });
 
-  // AI prompt form
+  // Fetch AI generator prompt config (platform admins only)
+  const { data: aiGeneratorConfig, isLoading: aiGeneratorLoading } = useQuery<AiPromptConfig>({
+    queryKey: ["/api/admin/config/ai-generator-prompt"],
+    enabled: !!(isAuthenticated && user?.isPlatformAdmin),
+  });
+
+  // AI assistant prompt form
   const aiPromptForm = useForm<z.infer<typeof aiPromptSchema>>({
     resolver: zodResolver(aiPromptSchema),
     defaultValues: {
@@ -101,14 +109,28 @@ export default function Admin() {
     },
   });
 
-  // Update default values when config loads
+  // AI generator prompt form
+  const aiGeneratorForm = useForm<z.infer<typeof aiPromptSchema>>({
+    resolver: zodResolver(aiPromptSchema),
+    defaultValues: {
+      prompt: aiGeneratorConfig?.prompt || "",
+    },
+  });
+
+  // Update default values when configs load
   useEffect(() => {
     if (aiPromptConfig?.prompt) {
       aiPromptForm.reset({ prompt: aiPromptConfig.prompt });
     }
   }, [aiPromptConfig, aiPromptForm]);
 
-  // AI prompt update mutation
+  useEffect(() => {
+    if (aiGeneratorConfig?.prompt) {
+      aiGeneratorForm.reset({ prompt: aiGeneratorConfig.prompt });
+    }
+  }, [aiGeneratorConfig, aiGeneratorForm]);
+
+  // AI assistant prompt update mutation
   const updateAiPromptMutation = useMutation({
     mutationFn: async (data: z.infer<typeof aiPromptSchema>) => {
       const response = await apiRequest("PUT", "/api/admin/config/ai-system-prompt", data);
@@ -116,15 +138,39 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/config/ai-system-prompt"] });
+      setEditingAiAssistant(false);
       toast({
-        title: "AI Prompt Updated",
-        description: "The AI system prompt has been updated successfully.",
+        title: "AI Assistant Prompt Updated",
+        description: "The AI assistant prompt has been updated successfully.",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Update Failed",
-        description: error.message || "Failed to update AI system prompt",
+        description: error.message || "Failed to update AI assistant prompt",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // AI generator prompt update mutation
+  const updateAiGeneratorMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof aiPromptSchema>) => {
+      const response = await apiRequest("PUT", "/api/admin/config/ai-generator-prompt", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/config/ai-generator-prompt"] });
+      setEditingAiGenerator(false);
+      toast({
+        title: "AI Generator Prompt Updated",
+        description: "The AI generator prompt has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update AI generator prompt",
         variant: "destructive",
       });
     },
@@ -769,82 +815,249 @@ export default function Admin() {
           {/* Platform Settings Tab */}
           {user?.isPlatformAdmin && (
             <TabsContent value="platform" className="space-y-6">
+              
+              {/* AI Assistant Prompt Configuration */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Bot className="w-5 h-5" />
-                    AI System Prompt Configuration
+                    AI Assistant Prompt
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Configure the default system prompt used by the AI assistant across all guides.
+                    Configure the system prompt used by the AI assistant when helping users with guides.
                   </p>
                 </CardHeader>
                 <CardContent>
                   {aiPromptLoading ? (
-                    <div className="text-center py-8" data-testid="loading-ai-prompt">
+                    <div className="text-center py-8" data-testid="loading-ai-assistant-prompt">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                       <p className="text-sm text-muted-foreground mt-2">Loading configuration...</p>
                     </div>
                   ) : (
-                    <Form {...aiPromptForm}>
-                      <form 
-                        onSubmit={aiPromptForm.handleSubmit((data) => updateAiPromptMutation.mutate(data))}
-                        className="space-y-6"
-                      >
-                        <FormField
-                          control={aiPromptForm.control}
-                          name="prompt"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>AI System Prompt</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="Enter the AI system prompt here. Use {CONTEXT} placeholder to include guide-specific context."
-                                  className="min-h-[300px] font-mono"
-                                  disabled={updateAiPromptMutation.isPending}
-                                  data-testid="input-ai-system-prompt"
-                                />
-                              </FormControl>
-                              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                <span>Use {"{CONTEXT}"} placeholder to include guide context</span>
-                                <span>{field.value?.length || 0} / 20,000 characters</span>
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="text-sm text-muted-foreground">
-                            {aiPromptConfig?.updatedAt && (
-                              <span data-testid="text-last-updated">
-                                Last updated: {new Date(aiPromptConfig.updatedAt).toLocaleString()}
-                                {aiPromptConfig.updatedBy && ` by ${aiPromptConfig.updatedBy}`}
-                              </span>
-                            )}
+                    <div className="space-y-4">
+                      {!editingAiAssistant ? (
+                        <>
+                          {/* Display current prompt */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-medium">Current Prompt</h4>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setEditingAiAssistant(true)}
+                                data-testid="button-edit-ai-assistant"
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </Button>
+                            </div>
+                            <div className="bg-muted p-4 rounded-md max-h-[200px] overflow-y-auto">
+                              <pre className="text-sm whitespace-pre-wrap font-mono" data-testid="text-current-ai-assistant-prompt">
+                                {aiPromptConfig?.prompt || "No prompt configured"}
+                              </pre>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {aiPromptConfig?.prompt?.length || 0} characters
+                              {aiPromptConfig?.updatedAt && (
+                                <span className="ml-4" data-testid="text-ai-assistant-last-updated">
+                                  Last updated: {new Date(aiPromptConfig.updatedAt).toLocaleString()}
+                                  {aiPromptConfig.updatedBy && ` by ${aiPromptConfig.updatedBy}`}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          
-                          <Button 
-                            type="submit" 
-                            disabled={updateAiPromptMutation.isPending || !aiPromptForm.formState.isDirty}
-                            data-testid="button-save-ai-prompt"
-                          >
-                            {updateAiPromptMutation.isPending ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                                Saving...
-                              </>
-                            ) : (
-                              <>
-                                <Settings className="w-4 h-4 mr-2" />
-                                Save Configuration
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
+                        </>
+                      ) : (
+                        <>
+                          {/* Edit mode */}
+                          <Form {...aiPromptForm}>
+                            <form 
+                              onSubmit={aiPromptForm.handleSubmit((data) => updateAiPromptMutation.mutate(data))}
+                              className="space-y-4"
+                            >
+                              <FormField
+                                control={aiPromptForm.control}
+                                name="prompt"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>AI Assistant Prompt</FormLabel>
+                                    <FormControl>
+                                      <Textarea
+                                        {...field}
+                                        placeholder="Enter the AI assistant prompt here. Use {CONTEXT} placeholder to include guide-specific context."
+                                        className="min-h-[300px] font-mono"
+                                        disabled={updateAiPromptMutation.isPending}
+                                        data-testid="input-ai-assistant-prompt"
+                                      />
+                                    </FormControl>
+                                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                      <span>Use {"{CONTEXT}"} placeholder to include guide context</span>
+                                      <span>{field.value?.length || 0} / 20,000 characters</span>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  type="submit" 
+                                  disabled={updateAiPromptMutation.isPending}
+                                  data-testid="button-save-ai-assistant"
+                                >
+                                  {updateAiPromptMutation.isPending ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                                      Saving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Settings className="w-4 h-4 mr-2" />
+                                      Save
+                                    </>
+                                  )}
+                                </Button>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setEditingAiAssistant(false);
+                                    aiPromptForm.reset({ prompt: aiPromptConfig?.prompt || "" });
+                                  }}
+                                  disabled={updateAiPromptMutation.isPending}
+                                  data-testid="button-cancel-ai-assistant"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          </Form>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* AI Generator Prompt Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="w-5 h-5" />
+                    AI Generator Prompt
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Configure the system prompt used by the AI Generator when creating new guides.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {aiGeneratorLoading ? (
+                    <div className="text-center py-8" data-testid="loading-ai-generator-prompt">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="text-sm text-muted-foreground mt-2">Loading configuration...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {!editingAiGenerator ? (
+                        <>
+                          {/* Display current prompt */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="text-sm font-medium">Current Prompt</h4>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setEditingAiGenerator(true)}
+                                data-testid="button-edit-ai-generator"
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </Button>
+                            </div>
+                            <div className="bg-muted p-4 rounded-md max-h-[200px] overflow-y-auto">
+                              <pre className="text-sm whitespace-pre-wrap font-mono" data-testid="text-current-ai-generator-prompt">
+                                {aiGeneratorConfig?.prompt || "No prompt configured"}
+                              </pre>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {aiGeneratorConfig?.prompt?.length || 0} characters
+                              {aiGeneratorConfig?.updatedAt && (
+                                <span className="ml-4" data-testid="text-ai-generator-last-updated">
+                                  Last updated: {new Date(aiGeneratorConfig.updatedAt).toLocaleString()}
+                                  {aiGeneratorConfig.updatedBy && ` by ${aiGeneratorConfig.updatedBy}`}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Edit mode */}
+                          <Form {...aiGeneratorForm}>
+                            <form 
+                              onSubmit={aiGeneratorForm.handleSubmit((data) => updateAiGeneratorMutation.mutate(data))}
+                              className="space-y-4"
+                            >
+                              <FormField
+                                control={aiGeneratorForm.control}
+                                name="prompt"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>AI Generator Prompt</FormLabel>
+                                    <FormControl>
+                                      <Textarea
+                                        {...field}
+                                        placeholder="Enter the AI generator prompt here. Use {CONTEXT} placeholder to include guide-specific context."
+                                        className="min-h-[300px] font-mono"
+                                        disabled={updateAiGeneratorMutation.isPending}
+                                        data-testid="input-ai-generator-prompt"
+                                      />
+                                    </FormControl>
+                                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                      <span>Use {"{CONTEXT}"} placeholder to include guide context</span>
+                                      <span>{field.value?.length || 0} / 20,000 characters</span>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  type="submit" 
+                                  disabled={updateAiGeneratorMutation.isPending}
+                                  data-testid="button-save-ai-generator"
+                                >
+                                  {updateAiGeneratorMutation.isPending ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                                      Saving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Settings className="w-4 h-4 mr-2" />
+                                      Save
+                                    </>
+                                  )}
+                                </Button>
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setEditingAiGenerator(false);
+                                    aiGeneratorForm.reset({ prompt: aiGeneratorConfig?.prompt || "" });
+                                  }}
+                                  disabled={updateAiGeneratorMutation.isPending}
+                                  data-testid="button-cancel-ai-generator"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          </Form>
+                        </>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
