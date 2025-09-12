@@ -1401,6 +1401,64 @@ Operational Prompts You Use:
     }
   });
 
+  // Platform configuration routes - AI generator prompt management
+  app.get('/api/admin/config/ai-generator-prompt', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can access config
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      const config = await storage.getPlatformConfig('ai_generator_prompt');
+      res.json({
+        prompt: config?.value || '',
+        updatedAt: config?.updatedAt,
+        updatedBy: config?.updatedBy
+      });
+    } catch (error) {
+      console.error("Error fetching AI generator prompt config:", error);
+      res.status(500).json({ message: "Failed to fetch AI generator prompt configuration" });
+    }
+  });
+
+  app.put('/api/admin/config/ai-generator-prompt', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can update config
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+
+      // Validate request body
+      const validationResult = aiSystemPromptUpdateSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { prompt } = validationResult.data;
+      
+      // Update the configuration
+      const config = await storage.setPlatformConfig('ai_generator_prompt', prompt, userId);
+      
+      res.json({
+        prompt: config.value,
+        updatedAt: config.updatedAt,
+        updatedBy: config.updatedBy
+      });
+    } catch (error) {
+      console.error("Error updating AI generator prompt config:", error);
+      res.status(500).json({ message: "Failed to update AI generator prompt configuration" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
