@@ -694,7 +694,7 @@ Operational Prompts You Use:
       const response = await AIService.generateResponse(
         completeMessages,
         dummyContext,
-        'anthropic'
+        'openai'
       );
 
       res.json({
