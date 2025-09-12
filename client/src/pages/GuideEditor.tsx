@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sidebar } from "@/components/Sidebar";
 import { FlowEditor } from "@/components/FlowEditor";
 import { StepEditor } from "@/components/StepEditor";
@@ -12,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useProjectContext } from "@/components/AppLayout";
-import type { Guide, FlowBox, Step } from "@shared/schema";
+import type { Guide, FlowBox, Step, Project } from "@shared/schema";
 import { Save, Eye, Settings, ChevronRight, Upload, X, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -24,6 +25,7 @@ export default function GuideEditor() {
   
   const [selectedStep, setSelectedStep] = useState<Step | null>(null);
   const [selectedPersona, setSelectedPersona] = useState<string>("Developer");
+  const [selectedProjectIdForForm, setSelectedProjectIdForForm] = useState<string>("");
   const [guideData, setGuideData] = useState({
     title: "",
     description: "",
@@ -50,6 +52,11 @@ export default function GuideEditor() {
     enabled: !!guideId,
   });
 
+  // Fetch projects for dropdown
+  const { data: projects } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+  });
+
   // Update form when guide data loads
   useEffect(() => {
     if (guide) {
@@ -63,8 +70,19 @@ export default function GuideEditor() {
         resourceAttachments: (guide as any).resourceAttachments || [],
         isActive: guide.isActive ?? true,
       });
+      // Set project for editing
+      if (guide.projectId) {
+        setSelectedProjectIdForForm(guide.projectId.toString());
+      }
     }
   }, [guide]);
+
+  // Set default project when creating new guide
+  useEffect(() => {
+    if (!isEditing && selectedProjectId && !selectedProjectIdForForm) {
+      setSelectedProjectIdForForm(selectedProjectId.toString());
+    }
+  }, [selectedProjectId, isEditing, selectedProjectIdForForm]);
 
   // Generate slug from title
   useEffect(() => {
@@ -163,7 +181,7 @@ export default function GuideEditor() {
     }
     
     // For new guides, ensure projectId is included
-    if (!isEditing && !selectedProjectId) {
+    if (!isEditing && !selectedProjectIdForForm) {
       toast({
         title: "Error",
         description: "Please select a project before creating a guide",
@@ -174,7 +192,7 @@ export default function GuideEditor() {
     
     const dataToSave = {
       ...guideData,
-      ...((!isEditing && selectedProjectId) && { projectId: selectedProjectId })
+      ...((!isEditing && selectedProjectIdForForm) && { projectId: parseInt(selectedProjectIdForForm) })
     };
     
     saveMutation.mutate(dataToSave);
@@ -245,6 +263,48 @@ export default function GuideEditor() {
             <div className="mb-6 bg-card rounded-lg border border-border p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 space-y-4">
+                  {/* Project Selection - Only show when creating new guide */}
+                  {!isEditing && (
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Project
+                      </label>
+                      <Select 
+                        value={selectedProjectIdForForm} 
+                        onValueChange={setSelectedProjectIdForForm}
+                      >
+                        <SelectTrigger data-testid="select-project" className="w-full">
+                          <SelectValue placeholder="Select a project for this guide" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects?.map((project) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Choose which project this guide belongs to
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Show current project when editing */}
+                  {isEditing && guide?.projectId && (
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Project
+                      </label>
+                      <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                        {projects?.find(p => p.id === guide.projectId)?.name || "Unknown Project"}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Guide belongs to this project
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
                       Guide Title
