@@ -1646,9 +1646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/custom-domains', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      console.log("🔍 Debug - Creating domain mapping for userId:", userId, "typeof:", typeof userId);
       const user = await storage.getUser(userId);
-      console.log("🔍 Debug - User found:", user?.email, "isPlatformAdmin:", user?.isPlatformAdmin);
       
       // Only platform admins can manage domains
       if (!user?.isPlatformAdmin) {
