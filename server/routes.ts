@@ -499,6 +499,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/guides', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Ensure projectId is provided
+      if (!req.body.projectId) {
+        return res.status(400).json({ message: "projectId is required for guide creation" });
+      }
+      
       const guideData = insertGuideSchema.parse({ ...req.body, createdBy: userId });
       const guide = await storage.createGuide(guideData);
       res.json(guide);

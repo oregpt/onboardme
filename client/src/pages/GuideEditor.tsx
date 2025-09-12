@@ -11,6 +11,7 @@ import { StepEditor } from "@/components/StepEditor";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useProjectContext } from "@/components/AppLayout";
 import type { Guide, FlowBox, Step } from "@shared/schema";
 import { Save, Eye, Settings, ChevronRight, Upload, X, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ export default function GuideEditor() {
   const [, params] = useRoute("/editor/:id?");
   const { user } = useAuth();
   const { toast } = useToast();
+  const { selectedProjectId } = useProjectContext();
   
   const [selectedStep, setSelectedStep] = useState<Step | null>(null);
   const [selectedPersona, setSelectedPersona] = useState<string>("Developer");
@@ -59,7 +61,7 @@ export default function GuideEditor() {
         personas: (guide.personas as string[]) || ["Developer", "Designer", "Product Manager", "Customer Success", "Finance", "CxO", "Consultant", "Other", "General"],
         resourceLinks: (guide as any).resourceLinks || [],
         resourceAttachments: (guide as any).resourceAttachments || [],
-        isActive: guide.isActive,
+        isActive: guide.isActive ?? true,
       });
     }
   }, [guide]);
@@ -124,9 +126,11 @@ export default function GuideEditor() {
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
       if (isEditing && guideId) {
-        return await apiRequest("PUT", `/api/guides/${guideId}`, data);
+        const response = await apiRequest("PUT", `/api/guides/${guideId}`, data);
+        return await response.json();
       } else {
-        return await apiRequest("POST", "/api/guides", data);
+        const response = await apiRequest("POST", "/api/guides", data);
+        return await response.json();
       }
     },
     onSuccess: (data) => {
@@ -157,7 +161,23 @@ export default function GuideEditor() {
       });
       return;
     }
-    saveMutation.mutate(guideData);
+    
+    // For new guides, ensure projectId is included
+    if (!isEditing && !selectedProjectId) {
+      toast({
+        title: "Error",
+        description: "Please select a project before creating a guide",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const dataToSave = {
+      ...guideData,
+      ...((!isEditing && selectedProjectId) && { projectId: selectedProjectId })
+    };
+    
+    saveMutation.mutate(dataToSave);
   };
 
   const handlePreview = () => {
