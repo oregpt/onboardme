@@ -1679,7 +1679,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaultGuideSlug: defaultGuideSlug || null,
         theme: theme || null,
         isActive: isActive !== false,
-        dnsVerified: false,
+        verifiedAt: null, // Not verified initially
+        createdBy: userId, // Add the user ID who created this domain mapping
       });
       
       res.json(domainMapping);
@@ -1765,7 +1766,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dnsVerified = isValidDomain && !mapping.domain.includes('localhost');
       
       // Update the domain mapping with verification status
-      await storage.updateCustomDomainMapping(domainId, { dnsVerified });
+      await storage.updateCustomDomainMapping(domainId, { 
+        verifiedAt: dnsVerified ? new Date() : null 
+      });
       
       res.json({
         verified: dnsVerified,
