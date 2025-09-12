@@ -276,7 +276,21 @@ export default function Admin() {
         </div>
 
         {/* Main Content */}
-        <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2" data-testid="tabs-admin">
+            <TabsTrigger value="projects" data-testid="tab-projects">
+              <Users className="w-4 h-4 mr-2" />
+              Projects
+            </TabsTrigger>
+            {user?.isPlatformAdmin && (
+              <TabsTrigger value="platform" data-testid="tab-platform-settings">
+                <Bot className="w-4 h-4 mr-2" />
+                Platform Settings
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          <TabsContent value="projects" className="space-y-6">
           {/* Create Project Button */}
           <div className="flex justify-end">
             <Dialog open={showCreateProject} onOpenChange={setShowCreateProject}>
@@ -750,7 +764,94 @@ export default function Admin() {
               </CardContent>
             </Card>
           </div>
-        </div>
+          </TabsContent>
+
+          {/* Platform Settings Tab */}
+          {user?.isPlatformAdmin && (
+            <TabsContent value="platform" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="w-5 h-5" />
+                    AI System Prompt Configuration
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Configure the default system prompt used by the AI assistant across all guides.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {aiPromptLoading ? (
+                    <div className="text-center py-8" data-testid="loading-ai-prompt">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                      <p className="text-sm text-muted-foreground mt-2">Loading configuration...</p>
+                    </div>
+                  ) : (
+                    <Form {...aiPromptForm}>
+                      <form 
+                        onSubmit={aiPromptForm.handleSubmit((data) => updateAiPromptMutation.mutate(data))}
+                        className="space-y-6"
+                      >
+                        <FormField
+                          control={aiPromptForm.control}
+                          name="prompt"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>AI System Prompt</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="Enter the AI system prompt here. Use {CONTEXT} placeholder to include guide-specific context."
+                                  className="min-h-[300px] font-mono"
+                                  disabled={updateAiPromptMutation.isPending}
+                                  data-testid="input-ai-system-prompt"
+                                />
+                              </FormControl>
+                              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>Use {"{CONTEXT}"} placeholder to include guide context</span>
+                                <span>{field.value?.length || 0} / 20,000 characters</span>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-muted-foreground">
+                            {aiPromptConfig?.updatedAt && (
+                              <span data-testid="text-last-updated">
+                                Last updated: {new Date(aiPromptConfig.updatedAt).toLocaleString()}
+                                {aiPromptConfig.updatedBy && ` by ${aiPromptConfig.updatedBy}`}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <Button 
+                            type="submit" 
+                            disabled={updateAiPromptMutation.isPending || !aiPromptForm.formState.isDirty}
+                            data-testid="button-save-ai-prompt"
+                          >
+                            {updateAiPromptMutation.isPending ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Settings className="w-4 h-4 mr-2" />
+                                Save Configuration
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+          
+        </Tabs>
       </div>
     </div>
   );

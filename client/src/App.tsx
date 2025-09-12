@@ -48,6 +48,7 @@ function Router() {
             <Route path="/ai-generator" component={AIGuideGenerator} />
             <Route path="/my-progress" component={MyProgress} />
             <Route path="/users" component={UserProgress} />
+            <Route path="/admin" component={Admin} />
             <Route path="/admin/:projectId" component={Admin} />
             <Route path="/admin/database" component={DatabaseManagement} />
             <Route path="/editor" component={GuideEditor} />
