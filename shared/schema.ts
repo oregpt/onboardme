@@ -169,6 +169,14 @@ export const stepComments = pgTable("step_comments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Platform configuration for global settings
+export const platformConfigs = pgTable("platform_configs", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedBy: varchar("updated_by"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   owner: one(users, {
@@ -299,6 +307,9 @@ export type InsertConversationHistory = typeof conversationHistory.$inferInsert;
 export type StepComment = typeof stepComments.$inferSelect;
 export type InsertStepComment = typeof stepComments.$inferInsert;
 
+export type PlatformConfig = typeof platformConfigs.$inferSelect;
+export type InsertPlatformConfig = typeof platformConfigs.$inferInsert;
+
 // Validation schemas
 export const insertProjectSchema = createInsertSchema(projects);
 export const insertProjectMemberSchema = createInsertSchema(projectMembers);
@@ -309,3 +320,9 @@ export const insertUserProgressSchema = createInsertSchema(userProgress);
 export const insertQAConversationSchema = createInsertSchema(qaConversations);
 export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase);
 export const insertConversationHistorySchema = createInsertSchema(conversationHistory);
+export const insertPlatformConfigSchema = createInsertSchema(platformConfigs);
+
+// AI System Prompt validation schema
+export const aiSystemPromptUpdateSchema = z.object({
+  prompt: z.string().min(1).max(20000)
+});
