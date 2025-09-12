@@ -54,7 +54,8 @@ export default function AIGuideGenerator() {
         messages: messages.map(m => ({ role: m.role, content: m.content })),
         ...(guideId && { guideId })
       };
-      return await apiRequest("POST", "/api/guides/generate-ai", requestBody);
+      const response = await apiRequest("POST", "/api/guides/generate-ai", requestBody);
+      return await response.json();
     },
   });
 

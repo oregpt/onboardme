@@ -697,13 +697,6 @@ Operational Prompts You Use:
         'openai'
       );
 
-      console.log('AI Response received:', {
-        content: response.content,
-        contentLength: response.content?.length,
-        provider: response.provider,
-        model: response.model
-      });
-
       res.json({
         success: true,
         content: response.content,
