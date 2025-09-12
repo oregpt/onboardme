@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -404,13 +405,13 @@ export default function AIGuideGenerator() {
                 
                 {/* Input */}
                 <div className="flex gap-2">
-                  <Input
+                  <Textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Describe what kind of guide you want to create..."
                     disabled={isGenerating}
-                    className="flex-1"
+                    className="flex-1 min-h-[120px] resize-none"
                     data-testid="input-chat-message"
                   />
                   <Button
