@@ -683,7 +683,11 @@ Operational Prompts You Use:
         guide: dummyGuide,
         flowBox: null,
         currentStep: null,
-        allSteps: []
+        allSteps: [],
+        generalFiles: [],
+        faqFiles: [],
+        otherHelpFiles: [],
+        agentInstructions: null
       };
 
       // Generate AI response using existing generateResponse method
