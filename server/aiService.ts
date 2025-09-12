@@ -148,7 +148,7 @@ export class KnowledgeBaseService {
 }
 
 // Default AI system prompt used as fallback
-const DEFAULT_AI_SYSTEM_PROMPT = `You are an AI assistant helping users with an onboarding guide. You have access to the complete guide content, step information, and attached files.
+export const DEFAULT_AI_SYSTEM_PROMPT = `You are an AI assistant helping users with an onboarding guide. You have access to the complete guide content, step information, and attached files.
 
 Use this context to answer questions accurately:
 

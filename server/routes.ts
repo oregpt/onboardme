@@ -1370,9 +1370,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Platform admin access required" });
       }
 
+      // Import the default prompt from aiService
+      const { DEFAULT_AI_SYSTEM_PROMPT } = await import('./aiService.js');
       const config = await storage.getPlatformConfig('ai_system_prompt');
+      
       res.json({
-        prompt: config?.value || '',
+        prompt: config?.value?.trim() || DEFAULT_AI_SYSTEM_PROMPT,
         updatedAt: config?.updatedAt,
         updatedBy: config?.updatedBy
       });
@@ -1430,7 +1433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const config = await storage.getPlatformConfig('ai_generator_prompt');
       res.json({
-        prompt: config?.value || '',
+        prompt: config?.value?.trim() || DEFAULT_AI_GENERATOR_PROMPT,
         updatedAt: config?.updatedAt,
         updatedBy: config?.updatedBy
       });
