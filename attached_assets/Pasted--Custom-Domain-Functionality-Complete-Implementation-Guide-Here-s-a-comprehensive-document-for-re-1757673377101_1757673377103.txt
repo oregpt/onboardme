@@ -1,0 +1,392 @@
+ Custom Domain Functionality - Complete Implementation Guide
+Here's a comprehensive document for replicating our custom domain system in another platform:
+
+🏗️ System Architecture Overview
+Core Concept
+The custom domain system allows users to map their own domains (e.g., canty.ai, oregpt.ai) directly to specific AI agents, providing white-label chat experiences without showing the main platform branding.
+
+Flow Example
+User visits: https://canty.ai/chat
+↓
+Middleware checks: "canty.ai" + "/chat" 
+↓
+Finds mapping: canty.ai → Agent ID 149
+↓
+Redirects to: /shared/chat/149
+↓
+User chats with agent through custom domain
+🗄️ Database Schema
+Custom Domain Mappings Table
+// shared/schema.ts
+export const customDomainMappings = pgTable("custom_domain_mappings", {
+  id: serial("id").primaryKey(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  path: varchar("path", { length: 255 }).default("/"),
+  agentId: integer("agent_id").notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure unique domain+path combinations
+  unique: uniqueIndex("domain_path_unique").on(table.domain, table.path),
+}));
+// Schema validation
+export const insertCustomDomainMappingSchema = createInsertSchema(customDomainMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+// TypeScript types
+export type CustomDomainMapping = typeof customDomainMappings.$inferSelect;
+export type InsertCustomDomainMapping = z.infer<typeof insertCustomDomainMappingSchema>;
+Key Schema Features
+Unique constraint on domain + path combination
+Cascade deletion when agent/organization is deleted
+Active/inactive status for enabling/disabling mappings
+Path support for multiple agents per domain (e.g., /chat, /support)
+🔄 Backend Implementation
+1. Storage Layer Operations
+// server/storage.ts - Interface
+interface IStorage {
+  createCustomDomainMapping(mapping: InsertCustomDomainMapping): Promise<CustomDomainMapping>;
+  getCustomDomainMappings(organizationId?: string): Promise<CustomDomainMapping[]>;
+  getCustomDomainMapping(id: number): Promise<CustomDomainMapping | undefined>;
+  getCustomDomainMappingByDomain(domain: string, path?: string): Promise<CustomDomainMapping | undefined>;
+  updateCustomDomainMapping(id: number, updates: Partial<InsertCustomDomainMapping>): Promise<CustomDomainMapping | undefined>;
+  deleteCustomDomainMapping(id: number): Promise<boolean>;
+}
+// Implementation
+class DatabaseStorage implements IStorage {
+  async createCustomDomainMapping(mapping: InsertCustomDomainMapping): Promise<CustomDomainMapping> {
+    const [domainMapping] = await db
+      .insert(customDomainMappings)
+      .values(mapping)
+      .returning();
+    return domainMapping;
+  }
+  async getCustomDomainMappingByDomain(domain: string, path: string = "/"): Promise<CustomDomainMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(customDomainMappings)
+      .where(and(
+        eq(customDomainMappings.domain, domain),
+        eq(customDomainMappings.path, path),
+        eq(customDomainMappings.isActive, true)  // Only active mappings
+      ));
+    return mapping;
+  }
+  // ... other CRUD operations
+}
+2. Routing Middleware (Critical Component)
+// server/routes.ts - Custom Domain Middleware
+app.use(async (req, res, next) => {
+  try {
+    const hostname = req.hostname;
+    const path = req.path;
+    
+    // Skip API routes - let them be handled directly
+    if (path.startsWith('/api/')) {
+      return next();
+    }
+    
+    console.log('🌐 CUSTOM DOMAIN CHECK:', { hostname, path });
+    
+    // Check for custom domain mappings
+    const mapping = await storage.getCustomDomainMappingByDomain(hostname, path);
+    
+    if (mapping && mapping.isActive) {
+      console.log('🎯 CUSTOM DOMAIN MATCH:', { 
+        domain: hostname, 
+        agentId: mapping.agentId, 
+        path 
+      });
+      
+      // Get the agent to verify it exists and is public
+      const agent = await storage.getAgent(mapping.agentId);
+      
+      if (agent && agent.isPublic) {
+        console.log('✅ REDIRECTING TO AGENT CHAT:', { 
+          agentName: agent.name, 
+          agentId: agent.id 
+        });
+        
+        // Redirect directly to shared chat interface
+        return res.redirect(`/shared/chat/${agent.id}`);
+      } else {
+        console.log('❌ AGENT NOT PUBLIC OR NOT FOUND:', { 
+          agentId: mapping.agentId, 
+          isPublic: agent?.isPublic 
+        });
+      }
+    }
+    
+    // Continue with normal routing
+    next();
+  } catch (error) {
+    console.error('Error in custom domain middleware:', error);
+    next();
+  }
+});
+3. Admin API Endpoints
+// server/routes.ts - Platform Admin Routes
+// GET all custom domain mappings
+app.get('/api/platform-admin/custom-domains', isAuthenticated, requirePlatformAdmin, async (req: any, res) => {
+  try {
+    const { organizationId } = req.query;
+    const mappings = await storage.getCustomDomainMappings(organizationId as string);
+    
+    // Enrich with agent and organization details
+    const enrichedMappings = await Promise.all(
+      mappings.map(async (mapping) => {
+        const agent = await storage.getAgent(mapping.agentId);
+        const organization = await storage.getOrganization(mapping.organizationId);
+        return {
+          ...mapping,
+          agentName: agent?.name || 'Unknown',
+          organizationName: organization?.name || 'Unknown'
+        };
+      })
+    );
+    
+    res.json(enrichedMappings);
+  } catch (error) {
+    console.error('Error fetching custom domain mappings:', error);
+    res.status(500).json({ message: 'Failed to fetch custom domain mappings' });
+  }
+});
+// POST create new mapping
+app.post('/api/platform-admin/custom-domains', isAuthenticated, requirePlatformAdmin, async (req: any, res) => {
+  try {
+    const mappingData = insertCustomDomainMappingSchema.parse(req.body);
+    
+    // Check for conflicts
+    const existingMapping = await storage.getCustomDomainMappingByDomain(mappingData.domain, mappingData.path);
+    if (existingMapping) {
+      return res.status(400).json({ message: 'Domain and path combination already exists' });
+    }
+    
+    const mapping = await storage.createCustomDomainMapping(mappingData);
+    res.status(201).json(mapping);
+  } catch (error) {
+    console.error('Error creating custom domain mapping:', error);
+    res.status(500).json({ message: 'Failed to create custom domain mapping' });
+  }
+});
+// PUT update mapping
+app.put('/api/platform-admin/custom-domains/:id', isAuthenticated, requirePlatformAdmin, async (req: any, res) => {
+  try {
+    const id = Number.parseInt(req.params.id);
+    const updates = insertCustomDomainMappingSchema.partial().parse(req.body);
+    
+    // Check for conflicts when updating domain/path
+    if (updates.domain || updates.path) {
+      const currentMapping = await storage.getCustomDomainMapping(id);
+      if (!currentMapping) {
+        return res.status(404).json({ message: 'Custom domain mapping not found' });
+      }
+      
+      const checkDomain = updates.domain || currentMapping.domain;
+      const checkPath = updates.path || currentMapping.path;
+      
+      const conflictMapping = await storage.getCustomDomainMappingByDomain(checkDomain, checkPath);
+      if (conflictMapping && conflictMapping.id !== id) {
+        return res.status(400).json({ message: 'Domain and path combination already exists' });
+      }
+    }
+    
+    const updatedMapping = await storage.updateCustomDomainMapping(id, updates);
+    if (!updatedMapping) {
+      return res.status(404).json({ message: 'Custom domain mapping not found' });
+    }
+    
+    res.json(updatedMapping);
+  } catch (error) {
+    console.error('Error updating custom domain mapping:', error);
+    res.status(500).json({ message: 'Failed to update custom domain mapping' });
+  }
+});
+// DELETE mapping
+app.delete('/api/platform-admin/custom-domains/:id', isAuthenticated, requirePlatformAdmin, async (req: any, res) => {
+  try {
+    const id = Number.parseInt(req.params.id);
+    const success = await storage.deleteCustomDomainMapping(id);
+    
+    if (!success) {
+      return res.status(404).json({ message: 'Custom domain mapping not found' });
+    }
+    
+    res.json({ message: 'Custom domain mapping deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting custom domain mapping:', error);
+    res.status(500).json({ message: 'Failed to delete custom domain mapping' });
+  }
+});
+🎨 Frontend Management Interface
+React Component Architecture
+// client/src/components/CustomDomainManagement.tsx
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+const customDomainSchema = z.object({
+  agentId: z.number().min(1, 'Agent is required'),
+  organizationId: z.string().min(1, 'Organization is required'),
+  domain: z.string().min(1, 'Domain is required').regex(
+    /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.[a-zA-Z]{2,}$/, 
+    'Invalid domain format'
+  ),
+  path: z.string().min(1, 'Path is required').regex(/^\/.*/, 'Path must start with /'),
+  isActive: z.boolean().default(true),
+});
+export default function CustomDomainManagement({ organizationFilter }: CustomDomainManagementProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingMapping, setEditingMapping] = useState<any>(null);
+  const form = useForm<CustomDomainFormData>({
+    resolver: zodResolver(customDomainSchema),
+    defaultValues: {
+      agentId: 0,
+      organizationId: '',
+      domain: '',
+      path: '/',
+      isActive: true,
+    },
+  });
+  // Fetch mappings
+  const { data: mappings = [], isLoading } = useQuery({
+    queryKey: ['/api/platform-admin/custom-domains', organizationFilter],
+    queryFn: async () => {
+      const params = organizationFilter ? `?organizationId=${organizationFilter}` : '';
+      const response = await apiRequest('GET', `/api/platform-admin/custom-domains${params}`);
+      return await response.json();
+    },
+  });
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (data: CustomDomainFormData) => {
+      const response = await apiRequest('POST', '/api/platform-admin/custom-domains', data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Custom domain mapping created successfully' });
+      queryClient.invalidateQueries({ queryKey: ['/api/platform-admin/custom-domains'] });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+  });
+  // Form and UI implementation...
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Custom Domain Mappings</CardTitle>
+        <Button onClick={openCreateDialog}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Domain Mapping
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {/* Table showing all mappings with edit/delete actions */}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Agent Name</TableHead>
+              <TableHead>Organization</TableHead>
+              <TableHead>Domain</TableHead>
+              <TableHead>Path</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {mappings.map((mapping: any) => (
+              <TableRow key={mapping.id}>
+                <TableCell>{mapping.agentName}</TableCell>
+                <TableCell>{mapping.organizationName}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {mapping.domain}
+                    <ExternalLink className="h-3 w-3" />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                    {mapping.path}
+                  </code>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={mapping.isActive ? 'default' : 'secondary'}>
+                    {mapping.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {new Date(mapping.createdAt).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(mapping)}>
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(mapping.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+🚀 Implementation Checklist for Replication
+Phase 1: Database Setup
+ Create custom_domain_mappings table with schema above
+ Add unique constraint on domain + path
+ Set up cascade deletion for agent/organization references
+ Create TypeScript types and validation schemas
+Phase 2: Backend Core
+ Implement storage interface with CRUD operations
+ Add custom domain routing middleware (CRITICAL - must be before other routes)
+ Create platform admin API endpoints
+ Add proper validation and conflict checking
+ Implement permission checks (platform admin only)
+Phase 3: Frontend Management
+ Create management component with table view
+ Add create/edit modal with form validation
+ Implement organization and agent dropdowns
+ Add status toggle (active/inactive)
+ Include delete confirmation
+ Add domain format validation
+Phase 4: Security & Validation
+ Validate domain format (regex pattern)
+ Check for duplicate domain+path combinations
+ Ensure only public agents can be mapped
+ Add platform admin role restrictions
+ Implement proper error handling
+Phase 5: Testing & Deployment
+ Test domain resolution middleware
+ Verify redirect functionality
+ Test edge cases (inactive mappings, non-public agents)
+ Add logging for debugging
+ Configure DNS and hosting for custom domains
+🔧 Key Technical Considerations
+Middleware Placement
+// CRITICAL: Custom domain middleware must come BEFORE authentication
+// but AFTER static file serving
+app.use(express.static('public'));
+app.use(customDomainMiddleware);  // ← HERE
+app.use(authMiddleware);
+app.use(apiRoutes);
+Domain Validation
+Use regex to validate domain format
+Check for existing mappings before creating
+Support both root domains and subdomains
+Path must start with /
+Security Measures
+Only platform admins can manage mappings
+Only public agents can be mapped to custom domains
+Validate agent ownership within organization
+Log all domain resolution attempts
+Performance Optimization
+Cache domain mappings in memory/Redis
+Use database indexes on domain lookups
+Monitor middleware performance
+Add rate limiting for domain resolution

@@ -9,6 +9,7 @@ import {
   serial,
   integer,
   boolean,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -70,10 +71,14 @@ export const guides = pgTable("guides", {
   resourceLinks: jsonb("resource_links").default(sql`'[]'::jsonb`), // Array of resource links
   resourceAttachments: jsonb("resource_attachments").default(sql`'[]'::jsonb`), // Array of resource attachments
   isActive: boolean("is_active").default(true),
+  isPublic: boolean("is_public").default(true), // Control public visibility for custom domains
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  // Ensure unique slugs per project
+  uniqueSlugPerProject: uniqueIndex("unique_slug_per_project").on(table.projectId, table.slug),
+}));
 
 // Flow boxes (containers for steps)
 export const flowBoxes = pgTable("flow_boxes", {
@@ -169,6 +174,29 @@ export const stepComments = pgTable("step_comments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Custom domain mappings for white-label hosting
+export const customDomainMappings = pgTable("custom_domain_mappings", {
+  id: serial("id").primaryKey(),
+  domain: varchar("domain", { length: 255 }).notNull(),
+  pathPrefix: varchar("path_prefix", { length: 255 }).default("/"),
+  feature: varchar("feature", { length: 20 }).notNull(), // 'chat', 'guides', 'both'
+  routeMode: varchar("route_mode", { length: 50 }).default("project_guides"), // 'project_guides', 'single_guide'
+  projectId: integer("project_id"), // For guide mappings
+  guideId: integer("guide_id"), // For single guide mode
+  defaultGuideSlug: varchar("default_guide_slug", { length: 100 }), // Fallback for single guide mode
+  theme: jsonb("theme").default(sql`'{}'::jsonb`), // Custom branding (logo, colors, etc)
+  seoSettings: jsonb("seo_settings").default(sql`'{}'::jsonb`), // Meta tags, indexing settings
+  isActive: boolean("is_active").default(true),
+  verificationToken: varchar("verification_token", { length: 255 }), // For DNS verification
+  verifiedAt: timestamp("verified_at"),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Ensure unique domain + pathPrefix combinations
+  uniqueDomainPath: uniqueIndex("unique_domain_path").on(table.domain, table.pathPrefix),
+}));
+
 // Platform configuration for global settings
 export const platformConfigs = pgTable("platform_configs", {
   key: varchar("key").primaryKey(),
@@ -209,6 +237,7 @@ export const guidesRelations = relations(guides, ({ one, many }) => ({
   qaConversations: many(qaConversations),
   knowledgeBase: many(knowledgeBase),
   conversationHistory: many(conversationHistory),
+  customDomainMappings: many(customDomainMappings),
 }));
 
 export const flowBoxesRelations = relations(flowBoxes, ({ one, many }) => ({
@@ -273,6 +302,21 @@ export const conversationHistoryRelations = relations(conversationHistory, ({ on
   }),
 }));
 
+export const customDomainMappingsRelations = relations(customDomainMappings, ({ one }) => ({
+  project: one(projects, {
+    fields: [customDomainMappings.projectId],
+    references: [projects.id],
+  }),
+  guide: one(guides, {
+    fields: [customDomainMappings.guideId],
+    references: [guides.id],
+  }),
+  creator: one(users, {
+    fields: [customDomainMappings.createdBy],
+    references: [users.id],
+  }),
+}));
+
 // Types
 export type User = typeof users.$inferSelect;
 export type UpsertUser = typeof users.$inferInsert;
@@ -310,6 +354,9 @@ export type InsertStepComment = typeof stepComments.$inferInsert;
 export type PlatformConfig = typeof platformConfigs.$inferSelect;
 export type InsertPlatformConfig = typeof platformConfigs.$inferInsert;
 
+export type CustomDomainMapping = typeof customDomainMappings.$inferSelect;
+export type InsertCustomDomainMapping = typeof customDomainMappings.$inferInsert;
+
 // Validation schemas
 export const insertProjectSchema = createInsertSchema(projects);
 export const insertProjectMemberSchema = createInsertSchema(projectMembers);
@@ -321,6 +368,12 @@ export const insertQAConversationSchema = createInsertSchema(qaConversations);
 export const insertKnowledgeBaseSchema = createInsertSchema(knowledgeBase);
 export const insertConversationHistorySchema = createInsertSchema(conversationHistory);
 export const insertPlatformConfigSchema = createInsertSchema(platformConfigs);
+export const insertCustomDomainMappingSchema = createInsertSchema(customDomainMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  verifiedAt: true,
+});
 
 // AI System Prompt validation schema
 export const aiSystemPromptUpdateSchema = z.object({
