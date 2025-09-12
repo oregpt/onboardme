@@ -11,6 +11,7 @@ import {
   conversationHistory,
   stepComments,
   platformConfigs,
+  customDomainMappings,
   type User,
   type UpsertUser,
   type Project,
@@ -35,6 +36,8 @@ import {
   type InsertStepComment,
   type PlatformConfig,
   type InsertPlatformConfig,
+  type CustomDomainMapping,
+  type InsertCustomDomainMapping,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
@@ -113,6 +116,16 @@ export interface IStorage {
   // Platform configuration operations
   getPlatformConfig(key: string): Promise<PlatformConfig | undefined>;
   setPlatformConfig(key: string, value: string, updatedBy?: string): Promise<PlatformConfig>;
+  
+  // Custom domain operations
+  createCustomDomainMapping(mapping: InsertCustomDomainMapping): Promise<CustomDomainMapping>;
+  getCustomDomainMappings(projectId?: number): Promise<CustomDomainMapping[]>;
+  getCustomDomainMapping(id: number): Promise<CustomDomainMapping | undefined>;
+  getCustomDomainMappingByDomain(domain: string, pathPrefix?: string): Promise<CustomDomainMapping | undefined>;
+  updateCustomDomainMapping(id: number, updates: Partial<InsertCustomDomainMapping>): Promise<CustomDomainMapping | undefined>;
+  deleteCustomDomainMapping(id: number): Promise<boolean>;
+  getPublicGuidesByProject(projectId: number): Promise<Guide[]>;
+  getPublicGuideBySlug(slug: string, projectId: number): Promise<Guide | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -353,11 +366,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getGuides(projectId?: number): Promise<Guide[]> {
-    const query = db.select().from(guides);
     if (projectId) {
-      query.where(eq(guides.projectId, projectId));
+      return await db
+        .select()
+        .from(guides)
+        .where(eq(guides.projectId, projectId))
+        .orderBy(desc(guides.createdAt));
     }
-    return await query.orderBy(desc(guides.createdAt));
+    return await db
+      .select()
+      .from(guides)
+      .orderBy(desc(guides.createdAt));
   }
 
   async getGuide(id: number): Promise<Guide | undefined> {
@@ -879,6 +898,87 @@ export class DatabaseStorage implements IStorage {
     });
 
     return metrics;
+  }
+
+  // Custom domain operations
+  async createCustomDomainMapping(mapping: InsertCustomDomainMapping): Promise<CustomDomainMapping> {
+    const [newMapping] = await db.insert(customDomainMappings).values(mapping).returning();
+    return newMapping;
+  }
+
+  async getCustomDomainMappings(projectId?: number): Promise<CustomDomainMapping[]> {
+    if (projectId) {
+      return await db
+        .select()
+        .from(customDomainMappings)
+        .where(eq(customDomainMappings.projectId, projectId))
+        .orderBy(desc(customDomainMappings.createdAt));
+    }
+    return await db
+      .select()
+      .from(customDomainMappings)
+      .orderBy(desc(customDomainMappings.createdAt));
+  }
+
+  async getCustomDomainMapping(id: number): Promise<CustomDomainMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(customDomainMappings)
+      .where(eq(customDomainMappings.id, id));
+    return mapping;
+  }
+
+  async getCustomDomainMappingByDomain(domain: string, pathPrefix: string = "/"): Promise<CustomDomainMapping | undefined> {
+    const [mapping] = await db
+      .select()
+      .from(customDomainMappings)
+      .where(and(
+        eq(customDomainMappings.domain, domain),
+        eq(customDomainMappings.pathPrefix, pathPrefix),
+        eq(customDomainMappings.isActive, true)
+      ));
+    return mapping;
+  }
+
+  async updateCustomDomainMapping(id: number, updates: Partial<InsertCustomDomainMapping>): Promise<CustomDomainMapping | undefined> {
+    const [updatedMapping] = await db
+      .update(customDomainMappings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(customDomainMappings.id, id))
+      .returning();
+    return updatedMapping;
+  }
+
+  async deleteCustomDomainMapping(id: number): Promise<boolean> {
+    const result = await db
+      .delete(customDomainMappings)
+      .where(eq(customDomainMappings.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getPublicGuidesByProject(projectId: number): Promise<Guide[]> {
+    return await db
+      .select()
+      .from(guides)
+      .where(and(
+        eq(guides.projectId, projectId),
+        eq(guides.isActive, true),
+        eq(guides.isPublic, true)
+      ))
+      .orderBy(desc(guides.createdAt));
+  }
+
+  async getPublicGuideBySlug(slug: string, projectId: number): Promise<Guide | undefined> {
+    const [guide] = await db
+      .select()
+      .from(guides)
+      .where(and(
+        eq(guides.slug, slug),
+        eq(guides.projectId, projectId),
+        eq(guides.isActive, true),
+        eq(guides.isPublic, true)
+      ));
+    return guide;
   }
 }
 
