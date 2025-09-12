@@ -300,7 +300,7 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8 px-4 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -322,7 +322,8 @@ export default function Admin() {
         </div>
 
         {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <div className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2" data-testid="tabs-admin">
             <TabsTrigger value="projects" data-testid="tab-projects">
               <Users className="w-4 h-4 mr-2" />
@@ -1065,6 +1066,7 @@ export default function Admin() {
           )}
           
         </Tabs>
+        </div>
       </div>
     </div>
   );
