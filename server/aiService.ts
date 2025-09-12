@@ -105,28 +105,30 @@ export class KnowledgeBaseService {
     }
 
     // All steps in the guide for broader context
-    contextText += `## All Steps in Guide\n`;
-    allSteps.forEach((step, index) => {
-      contextText += `### Step ${index + 1}: ${step.title}\n`;
-      if (step.content) {
-        contextText += `${step.content}\n\n`;
-      }
-    });
+    if (allSteps && allSteps.length > 0) {
+      contextText += `## All Steps in Guide\n`;
+      allSteps.forEach((step, index) => {
+        contextText += `### Step ${index + 1}: ${step.title}\n`;
+        if (step.content) {
+          contextText += `${step.content}\n\n`;
+        }
+      });
+    }
 
     // Attachment context by category
-    if (generalFiles.length > 0) {
+    if (generalFiles && generalFiles.length > 0) {
       contextText += `## General Documentation Files\n`;
       contextText += `Available files: ${generalFiles.map(f => f.name).join(', ')}\n`;
       contextText += `These are general documentation and resource files that provide background information.\n\n`;
     }
 
-    if (faqFiles.length > 0) {
+    if (faqFiles && faqFiles.length > 0) {
       contextText += `## FAQ Files\n`;
       contextText += `Available FAQ files: ${faqFiles.map(f => f.name).join(', ')}\n`;
       contextText += `These contain frequently asked questions and their answers specific to this integration.\n\n`;
     }
 
-    if (otherHelpFiles.length > 0) {
+    if (otherHelpFiles && otherHelpFiles.length > 0) {
       contextText += `## Additional Help Files\n`;
       contextText += `Available help files: ${otherHelpFiles.map(f => f.name).join(', ')}\n`;
       contextText += `These contain supplementary help materials and troubleshooting guides.\n\n`;
