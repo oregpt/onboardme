@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle, FileText } from "lucide-react";
+import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle, FileText, Bot } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import MarkdownImport from "@/components/MarkdownImport";
 
 interface Project {
@@ -42,6 +47,12 @@ interface ProjectMember {
   profileImageUrl: string | null;
 }
 
+interface AiPromptConfig {
+  prompt: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export default function Admin() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -57,6 +68,12 @@ export default function Admin() {
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("user");
   const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
+  const [activeTab, setActiveTab] = useState("projects");
+
+  // AI System Prompt validation schema
+  const aiPromptSchema = z.object({
+    prompt: z.string().min(1, "Prompt is required").max(20000, "Prompt too long")
+  });
 
   // Fetch all projects for admin view
   const { data: allProjects, isLoading: allProjectsLoading } = useQuery<Project[]>({
@@ -68,6 +85,49 @@ export default function Admin() {
   const { data: members, isLoading: membersLoading } = useQuery<ProjectMember[]>({
     queryKey: ["/api/projects", expandedProject, "members"],
     enabled: !!expandedProject && isAuthenticated,
+  });
+
+  // Fetch AI system prompt config (platform admins only)
+  const { data: aiPromptConfig, isLoading: aiPromptLoading } = useQuery<AiPromptConfig>({
+    queryKey: ["/api/admin/config/ai-system-prompt"],
+    enabled: !!(isAuthenticated && user?.isPlatformAdmin),
+  });
+
+  // AI prompt form
+  const aiPromptForm = useForm<z.infer<typeof aiPromptSchema>>({
+    resolver: zodResolver(aiPromptSchema),
+    defaultValues: {
+      prompt: aiPromptConfig?.prompt || "",
+    },
+  });
+
+  // Update default values when config loads
+  useEffect(() => {
+    if (aiPromptConfig?.prompt) {
+      aiPromptForm.reset({ prompt: aiPromptConfig.prompt });
+    }
+  }, [aiPromptConfig, aiPromptForm]);
+
+  // AI prompt update mutation
+  const updateAiPromptMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof aiPromptSchema>) => {
+      const response = await apiRequest("PUT", "/api/admin/config/ai-system-prompt", data);
+      return await response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/config/ai-system-prompt"] });
+      toast({
+        title: "AI Prompt Updated",
+        description: "The AI system prompt has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update AI system prompt",
+        variant: "destructive",
+      });
+    },
   });
 
   const createProjectMutation = useMutation({
