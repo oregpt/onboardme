@@ -267,8 +267,33 @@ Guidelines:
       max_completion_tokens: 1500,
     });
 
+    // Enhanced logging for debugging empty responses
+    const choice = response.choices[0];
+    const content = choice?.message?.content;
+    
+    console.log('=== OpenAI Response Analysis ===');
+    console.log('Response ID:', response.id);
+    console.log('Model:', response.model);
+    console.log('Choices length:', response.choices?.length);
+    console.log('Choice 0 - finish_reason:', choice?.finish_reason);
+    console.log('Choice 0 - message role:', choice?.message?.role);
+    console.log('Choice 0 - content exists:', !!content);
+    console.log('Choice 0 - content length:', content?.length || 0);
+    console.log('Choice 0 - content preview:', content ? content.substring(0, 100) + '...' : 'NULL/UNDEFINED');
+    console.log('Usage tokens:', response.usage);
+    
+    // Check for specific finish reasons that might explain empty content
+    if (!content) {
+      console.log('🚨 EMPTY CONTENT DETECTED:');
+      console.log('- Finish reason:', choice?.finish_reason);
+      console.log('- Full choice object:', JSON.stringify(choice, null, 2));
+      console.log('- Input message count:', messages.length);
+      console.log('- Last message preview:', messages[messages.length - 1]?.content?.substring(0, 200));
+    }
+    console.log('=====================================');
+
     return {
-      content: response.choices[0].message.content || 'No response generated',
+      content: content || 'No response generated',
       provider: 'openai',
       model: 'gpt-5',
       timestamp: new Date(),
