@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Guide } from "@shared/schema";
-import { Bot, User, Send, Sparkles, FileText, CheckCircle, Loader2 } from "lucide-react";
+import { Bot, User, Send, Sparkles, FileText, CheckCircle, Loader2, Mic, MicOff } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface ChatMessage {
@@ -39,8 +39,10 @@ export default function AIGuideGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [generatedMarkdown, setGeneratedMarkdown] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Fetch all guides for selection
   const { data: guides, isLoading: guidesLoading } = useQuery<Guide[]>({
@@ -236,6 +238,64 @@ export default function AIGuideGenerator() {
     }
   };
 
+  // Speech recognition setup
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      recognitionRef.current.lang = 'en-US';
+
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setInputValue(prev => prev + (prev ? ' ' : '') + finalTranscript);
+        }
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsRecording(false);
+        toast({
+          title: "Speech recognition error",
+          description: "Please try again or check microphone permissions",
+          variant: "destructive",
+        });
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, [toast]);
+
+  const startRecording = () => {
+    if (recognitionRef.current && !isRecording) {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (error) {
+        toast({
+          title: "Speech recognition unavailable",
+          description: "Your browser doesn't support speech recognition",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (recognitionRef.current && isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
   const handleImportGuide = async () => {
     if (!selectedGuideId || !generatedMarkdown) {
       toast({
@@ -414,14 +474,25 @@ export default function AIGuideGenerator() {
                     className="flex-1 min-h-[120px] resize-none"
                     data-testid="input-chat-message"
                   />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={isGenerating || !inputValue.trim()}
-                    size="icon"
-                    data-testid="button-send-message"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={isGenerating}
+                      size="icon"
+                      variant={isRecording ? "destructive" : "outline"}
+                      data-testid="button-microphone"
+                    >
+                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={isGenerating || !inputValue.trim()}
+                      size="icon"
+                      data-testid="button-send-message"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
