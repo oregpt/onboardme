@@ -1,0 +1,39 @@
+🌐 Custom Domain Check: {
+  hostname: '05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev',
+  path: '/admin/1'
+}
+11:33:52 AM [express] GET /api/auth/user 304 in 74ms :: {"id":"44848750","email":"ore.phillips@icloud…
+11:33:53 AM [express] GET /api/projects 304 in 106ms :: [{"id":3,"name":"CantyAI Guides","description…
+11:33:53 AM [express] GET /api/admin/config/ai-system-prompt 304 in 90ms :: {"prompt":"You are an AI …
+11:33:53 AM [express] GET /api/admin/config/ai-generator-prompt 304 in 174ms :: {"prompt":"Purpose: Y…
+11:33:53 AM [express] GET /api/guides 304 in 504ms :: [{"id":5,"projectId":3,"title":"Send's Homebrew…
+11:34:43 AM [vite] hmr update /src/pages/Admin.tsx, /src/index.css?v=kQgSnH1TUw6q2pOhxgVIC
+11:34:45 AM [vite] hmr update /src/pages/Admin.tsx, /src/index.css?v=kQgSnH1TUw6q2pOhxgVIC (x2)
+11:34:46 AM [vite] hmr update /src/pages/Admin.tsx, /src/index.css?v=kQgSnH1TUw6q2pOhxgVIC (x3)
+11:38:58 AM [express] GET /api/admin/custom-domains 304 in 870ms :: []
+Error creating custom domain mapping: error: null value in column "created_by" of relation "custom_domain_mappings" violates not-null constraint
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.createCustomDomainMapping (/home/runner/workspace/server/storage.ts:905:26)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:1672:29) {
+  length: 433,
+  severity: 'ERROR',
+  code: '23502',
+  detail: 'Failing row contains (2, canty.ai, /, both, project_guides, 3, null, null, {"text": "#1f2937", "primary": "#3b82f6", "secondary": "#f3f4f6"..., {}, t, null, null, null, 2025-09-12 11:39:14.762861, 2025-09-12 11:39:14.762861).',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'custom_domain_mappings',
+  column: 'created_by',
+  dataType: undefined,
+  constraint: undefined,
+  file: 'execMain.c',
+  line: '2021',
+  routine: 'ExecConstraints'
+}
+11:39:14 AM [express] POST /api/admin/custom-domains 500 in 329ms :: {"message":"Failed to create dom…
+^C
