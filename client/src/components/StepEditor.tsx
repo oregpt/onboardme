@@ -140,6 +140,14 @@ export function StepEditor({ step, selectedPersona, onClose }: StepEditorProps) 
   });
 
   const handleSave = () => {
+    console.log("🔥 handleSave called - Step ID:", step.id);
+    console.log("🔥 Step data to save:", {
+      title: stepData.title,
+      content: stepData.content,
+      isCritical: stepData.isCritical,
+      attachments: stepData.attachments,
+    });
+    
     updateStepMutation.mutate({
       title: stepData.title,
       content: stepData.content,
