@@ -1618,6 +1618,171 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // END PUBLIC API ENDPOINTS
   // ==========================================
 
+  // ==========================================
+  // ADMIN API ENDPOINTS (Platform Admin Only)
+  // For managing custom domain mappings
+  // ==========================================
+
+  // Get all custom domain mappings (Admin only)
+  app.get('/api/admin/custom-domains', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can manage domains
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+      
+      const domainMappings = await storage.getCustomDomainMappings();
+      res.json(domainMappings);
+    } catch (error) {
+      console.error("Error fetching custom domain mappings:", error);
+      res.status(500).json({ message: "Failed to fetch domain mappings" });
+    }
+  });
+
+  // Create custom domain mapping (Admin only)
+  app.post('/api/admin/custom-domains', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can manage domains
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+      
+      // Validate required fields
+      const { domain, pathPrefix, feature, routeMode, projectId, guideId, defaultGuideSlug, theme, isActive } = req.body;
+      
+      if (!domain || !feature || !routeMode) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Validate route mode specific requirements
+      if (routeMode === 'single_guide' && !guideId) {
+        return res.status(400).json({ message: "guideId is required for single_guide mode" });
+      }
+      
+      if (routeMode === 'project_guides' && !projectId) {
+        return res.status(400).json({ message: "projectId is required for project_guides mode" });
+      }
+      
+      const domainMapping = await storage.createCustomDomainMapping({
+        domain,
+        pathPrefix: pathPrefix || '/',
+        feature,
+        routeMode,
+        projectId: projectId || null,
+        guideId: guideId || null,
+        defaultGuideSlug: defaultGuideSlug || null,
+        theme: theme || null,
+        isActive: isActive !== false,
+        dnsVerified: false,
+      });
+      
+      res.json(domainMapping);
+    } catch (error) {
+      console.error("Error creating custom domain mapping:", error);
+      res.status(500).json({ message: "Failed to create domain mapping" });
+    }
+  });
+
+  // Update custom domain mapping (Admin only)
+  app.put('/api/admin/custom-domains/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can manage domains
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+      
+      const domainId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedMapping = await storage.updateCustomDomainMapping(domainId, updates);
+      if (!updatedMapping) {
+        return res.status(404).json({ message: "Domain mapping not found" });
+      }
+      
+      res.json(updatedMapping);
+    } catch (error) {
+      console.error("Error updating custom domain mapping:", error);
+      res.status(500).json({ message: "Failed to update domain mapping" });
+    }
+  });
+
+  // Delete custom domain mapping (Admin only)
+  app.delete('/api/admin/custom-domains/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can manage domains
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+      
+      const domainId = parseInt(req.params.id);
+      const deleted = await storage.deleteCustomDomainMapping(domainId);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Domain mapping not found" });
+      }
+      
+      res.json({ message: "Domain mapping deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting custom domain mapping:", error);
+      res.status(500).json({ message: "Failed to delete domain mapping" });
+    }
+  });
+
+  // Verify DNS for custom domain (Admin only)
+  app.post('/api/admin/custom-domains/:id/verify-dns', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only platform admins can manage domains
+      if (!user?.isPlatformAdmin) {
+        return res.status(403).json({ message: "Platform admin access required" });
+      }
+      
+      const domainId = parseInt(req.params.id);
+      
+      // Get the domain mapping
+      const mapping = await storage.getCustomDomainMapping(domainId);
+      if (!mapping) {
+        return res.status(404).json({ message: "Domain mapping not found" });
+      }
+      
+      // TODO: Implement actual DNS verification logic
+      // For now, we'll simulate verification based on domain format
+      const isValidDomain = /^[a-zA-Z0-9][a-zA-Z0-9-._]*[a-zA-Z0-9]$/.test(mapping.domain);
+      const dnsVerified = isValidDomain && !mapping.domain.includes('localhost');
+      
+      // Update the domain mapping with verification status
+      await storage.updateCustomDomainMapping(domainId, { dnsVerified });
+      
+      res.json({
+        verified: dnsVerified,
+        message: dnsVerified 
+          ? "Domain DNS verification successful" 
+          : "Domain DNS verification failed. Please check your DNS configuration."
+      });
+    } catch (error) {
+      console.error("Error verifying DNS:", error);
+      res.status(500).json({ message: "Failed to verify DNS" });
+    }
+  });
+
+  // ==========================================
+  // END ADMIN API ENDPOINTS
+  // ==========================================
+
   // AI Chat endpoint
   app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
     try {

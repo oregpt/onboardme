@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle, FileText, Bot } from "lucide-react";
+import { Settings, Users, ArrowLeft, Database, Plus, Edit, Trash2, ChevronDown, ChevronRight, AlertTriangle, FileText, Bot, Globe, ExternalLink, CheckCircle, XCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -1062,6 +1062,9 @@ export default function Admin() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Custom Domain Mappings Management */}
+              <CustomDomainMappings />
             </TabsContent>
           )}
           
@@ -1069,5 +1072,689 @@ export default function Admin() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Custom Domain Mappings Management Component
+function CustomDomainMappings() {
+  const { toast } = useToast();
+  const [showAddDomain, setShowAddDomain] = useState(false);
+  const [editingDomain, setEditingDomain] = useState<number | null>(null);
+  const [deletingDomain, setDeletingDomain] = useState<number | null>(null);
+  const [verifyingDomain, setVerifyingDomain] = useState<number | null>(null);
+
+  // Domain mapping schema
+  const domainMappingSchema = z.object({
+    domain: z.string().min(1, "Domain is required").regex(/^[a-zA-Z0-9][a-zA-Z0-9-._]*[a-zA-Z0-9]$/, "Invalid domain format"),
+    pathPrefix: z.string().default("/"),
+    feature: z.enum(["chat", "guides", "both"]),
+    routeMode: z.enum(["single_guide", "project_guides"]),
+    projectId: z.coerce.number().optional(),
+    guideId: z.coerce.number().optional(),
+    defaultGuideSlug: z.string().optional(),
+    theme: z.object({
+      primary: z.string().optional(),
+      secondary: z.string().optional(),
+      background: z.string().optional(),
+      text: z.string().optional(),
+    }).optional(),
+    isActive: z.boolean().default(true),
+  });
+
+  type DomainMappingForm = z.infer<typeof domainMappingSchema>;
+
+  interface CustomDomainMapping {
+    id: number;
+    domain: string;
+    pathPrefix: string;
+    feature: 'chat' | 'guides' | 'both';
+    routeMode: 'single_guide' | 'project_guides';
+    projectId: number | null;
+    guideId: number | null;
+    defaultGuideSlug: string | null;
+    theme: any;
+    isActive: boolean;
+    dnsVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+  // Fetch all domain mappings
+  const { data: domainMappings, isLoading: domainMappingsLoading } = useQuery<CustomDomainMapping[]>({
+    queryKey: ["/api/admin/custom-domains"],
+  });
+
+  // Fetch projects for dropdown
+  const { data: allProjects } = useQuery<Project[]>({
+    queryKey: ["/api/projects"],
+  });
+
+  // Fetch guides for dropdown
+  const { data: allGuides } = useQuery<any[]>({
+    queryKey: ["/api/guides"],
+  });
+
+  // Domain form
+  const domainForm = useForm<DomainMappingForm>({
+    resolver: zodResolver(domainMappingSchema),
+    defaultValues: {
+      pathPrefix: "/",
+      feature: "both",
+      routeMode: "project_guides",
+      isActive: true,
+      theme: {
+        primary: "#3b82f6",
+        secondary: "#f3f4f6",
+        background: "#ffffff",
+        text: "#1f2937",
+      }
+    },
+  });
+
+  // Create domain mutation
+  const createDomainMutation = useMutation({
+    mutationFn: async (data: DomainMappingForm) => {
+      return await apiRequest("POST", "/api/admin/custom-domains", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/custom-domains"] });
+      toast({
+        title: "Success",
+        description: "Domain mapping created successfully",
+      });
+      setShowAddDomain(false);
+      domainForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create domain mapping",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update domain mutation
+  const updateDomainMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<DomainMappingForm> }) => {
+      return await apiRequest("PUT", `/api/admin/custom-domains/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/custom-domains"] });
+      toast({
+        title: "Success", 
+        description: "Domain mapping updated successfully",
+      });
+      setEditingDomain(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update domain mapping",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete domain mutation
+  const deleteDomainMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/admin/custom-domains/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/custom-domains"] });
+      toast({
+        title: "Success",
+        description: "Domain mapping deleted successfully",
+      });
+      setDeletingDomain(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete domain mapping", 
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Verify DNS mutation
+  const verifyDnsMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("POST", `/api/admin/custom-domains/${id}/verify-dns`);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/custom-domains"] });
+      toast({
+        title: data.verified ? "Success" : "Warning",
+        description: data.message,
+        variant: data.verified ? "default" : "destructive",
+      });
+      setVerifyingDomain(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to verify DNS",
+        variant: "destructive",
+      });
+      setVerifyingDomain(null);
+    },
+  });
+
+  const handleEdit = (domain: CustomDomainMapping) => {
+    domainForm.reset({
+      domain: domain.domain,
+      pathPrefix: domain.pathPrefix,
+      feature: domain.feature,
+      routeMode: domain.routeMode,
+      projectId: domain.projectId || undefined,
+      guideId: domain.guideId || undefined,
+      defaultGuideSlug: domain.defaultGuideSlug || undefined,
+      theme: domain.theme || {
+        primary: "#3b82f6",
+        secondary: "#f3f4f6", 
+        background: "#ffffff",
+        text: "#1f2937",
+      },
+      isActive: domain.isActive,
+    });
+    setEditingDomain(domain.id);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Globe className="w-5 h-5" />
+          Custom Domain Mappings
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Manage custom domains for white-label guide embedding. Configure domains to serve guides and chat functionality on client websites.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {domainMappingsLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="text-sm text-muted-foreground mt-2">Loading domain mappings...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Add Domain Button */}
+            <div className="flex justify-end">
+              <Dialog open={showAddDomain} onOpenChange={setShowAddDomain}>
+                <DialogTrigger asChild>
+                  <Button data-testid="button-add-domain">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Domain
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Custom Domain Mapping</DialogTitle>
+                  </DialogHeader>
+                  <Form {...domainForm}>
+                    <form onSubmit={domainForm.handleSubmit((data) => createDomainMutation.mutate(data))} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={domainForm.control}
+                          name="domain"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Domain</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="help.example.com" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={domainForm.control}
+                          name="pathPrefix"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Path Prefix</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="/" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={domainForm.control}
+                          name="feature"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Features</FormLabel>
+                              <FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="guides">Guides Only</SelectItem>
+                                    <SelectItem value="chat">Chat Only</SelectItem>
+                                    <SelectItem value="both">Both</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={domainForm.control}
+                          name="routeMode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Route Mode</FormLabel>
+                              <FormControl>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="single_guide">Single Guide</SelectItem>
+                                    <SelectItem value="project_guides">Project Guides</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Conditional fields based on route mode */}
+                      {domainForm.watch("routeMode") === "single_guide" && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={domainForm.control}
+                            name="guideId"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Guide ID</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select guide..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {allGuides?.map((guide) => (
+                                        <SelectItem key={guide.id} value={guide.id.toString()}>
+                                          {guide.title}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={domainForm.control}
+                            name="defaultGuideSlug"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Default Guide Slug</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="getting-started" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+
+                      {domainForm.watch("routeMode") === "project_guides" && (
+                        <FormField
+                          control={domainForm.control}
+                          name="projectId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Project</FormLabel>
+                              <FormControl>
+                                <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString()}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select project..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {allProjects?.map((project) => (
+                                      <SelectItem key={project.id} value={project.id.toString()}>
+                                        {project.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Theme Configuration */}
+                      <div className="space-y-2">
+                        <Label>Theme Configuration</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={domainForm.control}
+                            name="theme.primary"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Primary Color</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="color" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={domainForm.control}
+                            name="theme.secondary"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Secondary Color</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="color" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      <FormField
+                        control={domainForm.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">Active</FormLabel>
+                              <div className="text-sm text-muted-foreground">
+                                Enable this domain mapping
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex justify-end space-x-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setShowAddDomain(false);
+                            domainForm.reset();
+                          }}
+                          disabled={createDomainMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createDomainMutation.isPending}>
+                          {createDomainMutation.isPending ? "Creating..." : "Create Domain"}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {/* Domain Mappings List */}
+            {!domainMappings || domainMappings.length === 0 ? (
+              <div className="text-center py-8">
+                <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-2">No Custom Domains</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add your first custom domain to enable white-label guide embedding.
+                </p>
+                <Button onClick={() => setShowAddDomain(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Domain
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {domainMappings.map((domain) => (
+                  <Card key={domain.id} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-3">
+                            <h3 className="font-semibold text-lg flex items-center gap-2">
+                              <ExternalLink className="w-4 h-4" />
+                              {domain.domain}
+                            </h3>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={domain.isActive ? "default" : "secondary"}>
+                                {domain.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                              <Badge variant={domain.dnsVerified ? "default" : "secondary"} className={`flex items-center gap-1 ${domain.dnsVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {domain.dnsVerified ? (
+                                  <>
+                                    <CheckCircle className="w-3 h-3" />
+                                    Verified
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="w-3 h-3" />
+                                    Unverified
+                                  </>
+                                )}
+                              </Badge>
+                              <Badge variant="outline">{domain.feature}</Badge>
+                              <Badge variant="outline">{domain.routeMode.replace('_', ' ')}</Badge>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {domain.pathPrefix !== "/" && `Path: ${domain.pathPrefix} • `}
+                            {domain.routeMode === "single_guide" 
+                              ? `Guide ID: ${domain.guideId}${domain.defaultGuideSlug ? ` (${domain.defaultGuideSlug})` : ''}`
+                              : `Project ID: ${domain.projectId}`
+                            }
+                          </p>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          {!domain.dnsVerified && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setVerifyingDomain(domain.id);
+                                verifyDnsMutation.mutate(domain.id);
+                              }}
+                              disabled={verifyingDomain === domain.id}
+                            >
+                              {verifyingDomain === domain.id ? "Verifying..." : "Verify DNS"}
+                            </Button>
+                          )}
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(domain)}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeletingDomain(domain.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    {domain.theme && (
+                      <CardContent className="pt-0">
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <span>Theme:</span>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 rounded border" style={{ backgroundColor: domain.theme.primary }}></div>
+                            <span>Primary</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 rounded border" style={{ backgroundColor: domain.theme.secondary }}></div>
+                            <span>Secondary</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Edit Domain Dialog */}
+        <Dialog open={!!editingDomain} onOpenChange={() => setEditingDomain(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Domain Mapping</DialogTitle>
+            </DialogHeader>
+            <Form {...domainForm}>
+              <form onSubmit={domainForm.handleSubmit((data) => {
+                if (editingDomain) {
+                  updateDomainMutation.mutate({ id: editingDomain, data });
+                }
+              })} className="space-y-4">
+                {/* Same form fields as create, but pre-populated */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={domainForm.control}
+                    name="domain"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Domain</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="help.example.com" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={domainForm.control}
+                    name="pathPrefix"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Path Prefix</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="/" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={domainForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Active</FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          Enable this domain mapping
+                        </div>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingDomain(null)}
+                    disabled={updateDomainMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateDomainMutation.isPending}>
+                    {updateDomainMutation.isPending ? "Updating..." : "Update Domain"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Domain Dialog */}
+        <Dialog open={!!deletingDomain} onOpenChange={() => setDeletingDomain(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Domain Mapping</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 p-4 bg-destructive/10 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Warning: This action cannot be undone</p>
+                  <p className="text-sm text-muted-foreground">
+                    This will permanently delete the domain mapping and all associated configurations.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeletingDomain(null)}
+                  disabled={deleteDomainMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (deletingDomain) {
+                      deleteDomainMutation.mutate(deletingDomain);
+                    }
+                  }}
+                  disabled={deleteDomainMutation.isPending}
+                >
+                  {deleteDomainMutation.isPending ? "Deleting..." : "Delete Domain"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 }
