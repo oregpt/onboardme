@@ -285,7 +285,7 @@ export class AIService {
         role: msg.role,
         content: msg.content,
       })),
-      max_completion_tokens: 1500,
+      max_completion_tokens: 4000,
     });
 
     // Enhanced logging for debugging empty responses
