@@ -907,17 +907,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCustomDomainMappings(projectId?: number): Promise<CustomDomainMapping[]> {
-    if (projectId) {
-      return await db
-        .select()
-        .from(customDomainMappings)
-        .where(eq(customDomainMappings.projectId, projectId))
-        .orderBy(desc(customDomainMappings.createdAt));
+    try {
+      console.log('🗄️ getCustomDomainMappings called with projectId:', projectId);
+      let results;
+      if (projectId) {
+        console.log('🔍 Querying with project filter:', projectId);
+        results = await db
+          .select()
+          .from(customDomainMappings)
+          .where(eq(customDomainMappings.projectId, projectId))
+          .orderBy(desc(customDomainMappings.createdAt));
+      } else {
+        console.log('🔍 Querying all domain mappings');
+        results = await db
+          .select()
+          .from(customDomainMappings)
+          .orderBy(desc(customDomainMappings.createdAt));
+      }
+      console.log('✅ Query successful, returned', results.length, 'mappings');
+      if (results.length > 0) {
+        console.log('📄 Sample mapping:', {
+          id: results[0].id,
+          domain: results[0].domain,
+          isActive: results[0].isActive,
+          projectId: results[0].projectId
+        });
+      }
+      return results;
+    } catch (error) {
+      console.error('❌ Database error in getCustomDomainMappings:', error);
+      return [];
     }
-    return await db
-      .select()
-      .from(customDomainMappings)
-      .orderBy(desc(customDomainMappings.createdAt));
   }
 
   async getCustomDomainMapping(id: number): Promise<CustomDomainMapping | undefined> {
