@@ -111,6 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const forwarded = req.get('x-forwarded-host') || req.get('x-original-host');
       const rawHost = req.get('host')?.split(':')[0];
       const hostname = (forwarded || rawHost || req.hostname || '').toLowerCase();
+      const path = req.path;
       
       // Debug: Log ALL headers for root path requests to find guides.canty.ai
       if (path === '/') {
@@ -121,8 +122,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'allHeaders': req.headers
         });
       }
-      
-      const path = req.path;
       const acceptHeader = req.headers.accept || '';
 
       // Skip API routes, asset/HMR paths, and white-label routes - let them be handled directly
