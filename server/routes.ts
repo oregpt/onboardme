@@ -1972,7 +1972,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div id="root" class="white-label-container">
         <div data-white-label-project="${projectId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
     </div>
-    <script type="module" src="/src/white-label-entry.tsx"></script>
+    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
     res.send(html);
@@ -2034,7 +2035,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div id="root" class="white-label-container">
         <div data-white-label-guide="${guideId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
     </div>
-    <script type="module" src="/src/white-label-entry.tsx"></script>
+    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
     res.send(html);
@@ -2096,7 +2098,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div id="root" class="white-label-container">
         <div data-white-label-slug="${slug}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}' data-project-id="${mapping.projectId}"></div>
     </div>
-    <script type="module" src="/src/white-label-entry.tsx"></script>
+    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
     res.send(html);
