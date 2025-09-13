@@ -1913,10 +1913,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // White-label project guides interface
   app.get('/white-label/project/:projectId', async (req, res) => {
     const projectId = parseInt(req.params.projectId);
-    const mapping = res.locals.domainMapping;
+    let mapping = res.locals.domainMapping;
+    
+    // If no domain mapping context (when accessed directly), try to find it using headers
+    if (!mapping) {
+      const hostname = req.get('host')?.split(':')[0] || 
+                      req.get('x-forwarded-host') || 
+                      req.get('referer')?.match(/https?:\/\/([^\/]+)/)?.[1];
+      
+      if (hostname) {
+        console.log('🔍 White-label route fetching domain mapping for:', hostname);
+        try {
+          const allMappings = await storage.getCustomDomainMappings();
+          mapping = allMappings.find(m => m.domain === hostname && m.isActive);
+          console.log('📋 Found mapping:', mapping ? `Project ${mapping.projectId}` : 'none');
+        } catch (error) {
+          console.error('❌ Error fetching mapping for white-label route:', error);
+        }
+      }
+    }
     
     // Ensure domain mapping context exists
     if (!mapping) {
+      console.log('❌ No domain mapping found for white-label route');
       return res.status(404).send('Not found');
     }
     
@@ -1961,7 +1980,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // White-label single guide interface
   app.get('/white-label/guide/:guideId', async (req, res) => {
     const guideId = parseInt(req.params.guideId);
-    const mapping = res.locals.domainMapping;
+    let mapping = res.locals.domainMapping;
+    
+    // If no domain mapping context, try to find it using headers
+    if (!mapping) {
+      const hostname = req.get('host')?.split(':')[0] || 
+                      req.get('x-forwarded-host') || 
+                      req.get('referer')?.match(/https?:\/\/([^\/]+)/)?.[1];
+      
+      if (hostname) {
+        try {
+          const allMappings = await storage.getCustomDomainMappings();
+          mapping = allMappings.find(m => m.domain === hostname && m.isActive);
+        } catch (error) {
+          console.error('❌ Error fetching mapping for white-label guide route:', error);
+        }
+      }
+    }
     
     if (!mapping) {
       return res.status(404).send('Not found');
@@ -2007,7 +2042,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // White-label guide by slug interface
   app.get('/white-label/guide/slug/:slug', async (req, res) => {
     const slug = req.params.slug;
-    const mapping = res.locals.domainMapping;
+    let mapping = res.locals.domainMapping;
+    
+    // If no domain mapping context, try to find it using headers
+    if (!mapping) {
+      const hostname = req.get('host')?.split(':')[0] || 
+                      req.get('x-forwarded-host') || 
+                      req.get('referer')?.match(/https?:\/\/([^\/]+)/)?.[1];
+      
+      if (hostname) {
+        try {
+          const allMappings = await storage.getCustomDomainMappings();
+          mapping = allMappings.find(m => m.domain === hostname && m.isActive);
+        } catch (error) {
+          console.error('❌ Error fetching mapping for white-label slug route:', error);
+        }
+      }
+    }
     
     if (!mapping) {
       return res.status(404).send('Not found');
