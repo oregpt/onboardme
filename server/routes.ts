@@ -1956,40 +1956,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // Serve white-label HTML with project guides
-    const theme = mapping.theme || {};
+    // TEMPORARY TEST: Return simple Hello page
     const html = `
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guides</title>
-    <style>
-        :root {
-            --primary: ${theme.primary || '#3b82f6'};
-            --secondary: ${theme.secondary || '#f3f4f6'};
-            --background: ${theme.background || '#ffffff'};
-            --text: ${theme.text || '#1f2937'};
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-        }
-        .white-label-container {
-            min-height: 100vh;
-        }
-    </style>
-</head>
+<html>
+<head><title>Test</title></head>
 <body>
-    <div id="root" class="white-label-container">
-        <div data-white-label-project="${projectId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
-    </div>
-    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
+    <h1>Hello</h1>
+    <p>Project ID: ${projectId}</p>
+    <p>Domain: ${mapping.domain}</p>
+    <p>Host header: ${req.get('host')}</p>
+    <p>X-Forwarded-Host: ${req.get('x-forwarded-host') || 'none'}</p>
+    <p>Mapping found: YES</p>
 </body>
 </html>`;
     // Prevent CDN caching of white-label content
