@@ -108,9 +108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(async (req, res, next) => {
     try {
       // Check forwarded headers for original hostname (Replit proxy forwards the domain here)
-      const hostname = req.get('x-forwarded-host') || 
-                      req.get('x-original-host') || 
-                      req.get('host')?.split(':')[0] || 
+      const hostname = req.get('host')?.split(':')[0] || 
+                      req.get('x-forwarded-host') || 
                       req.hostname;
       const path = req.path;
       const acceptHeader = req.headers.accept || '';
@@ -131,16 +130,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🌐 Custom Domain Check:', { 
         hostname: hostname.substring(0, 50) + (hostname.length > 50 ? '...' : ''), 
-        path,
-        allHeaders: req.headers
+        path
       });
 
       // Get all mappings for this domain and find the best matching prefix
       let mapping = null;
-      const allMappingsForDomain = await storage.getCustomDomainMappings();
-      const domainMappings = allMappingsForDomain.filter(m => 
-        m.domain === hostname && m.isActive
-      );
+      let domainMappings = [];
+      try {
+        console.log('🔍 Looking for domain mapping for:', hostname);
+        const allMappingsForDomain = await storage.getCustomDomainMappings();
+        console.log('📋 Found total mappings:', allMappingsForDomain.length);
+        domainMappings = allMappingsForDomain.filter(m => 
+          m.domain === hostname && m.isActive
+        );
+        console.log('🎯 Matching active mappings for domain:', domainMappings.length);
+        
+        if (domainMappings.length > 0) {
+          console.log('📄 Domain mapping details:', domainMappings.map(m => ({
+            id: m.id,
+            domain: m.domain,
+            pathPrefix: m.pathPrefix,
+            feature: m.feature,
+            routeMode: m.routeMode,
+            projectId: m.projectId,
+            guideId: m.guideId
+          })));
+        }
+      } catch (error) {
+        console.error('❌ Error fetching domain mappings:', error);
+        return next();
+      }
 
       // Sort by pathPrefix length (longest first) for best match
       domainMappings.sort((a, b) => (b.pathPrefix?.length || 1) - (a.pathPrefix?.length || 1));
