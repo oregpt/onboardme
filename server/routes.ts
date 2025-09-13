@@ -140,6 +140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('🔍 Looking for domain mapping for:', hostname);
         const allMappingsForDomain = await storage.getCustomDomainMappings();
         console.log('📋 Found total mappings:', allMappingsForDomain.length);
+        console.log('🔍 First mapping fields:', allMappingsForDomain[0] ? Object.keys(allMappingsForDomain[0]) : 'no mappings');
+        console.log('🔍 First mapping values:', allMappingsForDomain[0] || 'no mappings');
         domainMappings = allMappingsForDomain.filter(m => 
           m.domain === hostname && m.isActive
         );
