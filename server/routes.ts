@@ -107,21 +107,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Custom domain routing middleware
   app.use(async (req, res, next) => {
     try {
-      // Check forwarded headers for original hostname (Replit proxy forwards the domain here)
-      const forwarded = req.get('x-forwarded-host') || req.get('x-original-host');
-      const rawHost = req.get('host')?.split(':')[0];
-      const hostname = (forwarded || rawHost || req.hostname || '').toLowerCase();
+      // Fix hostname resolution to match working white-label route logic
+      const hostname = (req.get('host')?.split(':')[0] || 
+                       req.get('x-forwarded-host') || 
+                       req.hostname || '').toLowerCase();
       const path = req.path;
-      
-      // Debug: Log ALL headers for root path requests to find guides.canty.ai
-      if (path === '/') {
-        console.log('🎯 ROOT PATH REQUEST DEBUG:', {
-          'path': req.path,
-          'method': req.method,
-          'hostname': hostname,
-          'allHeaders': req.headers
-        });
-      }
       const acceptHeader = req.headers.accept || '';
 
       // Skip API routes, asset/HMR paths, and white-label routes - let them be handled directly
@@ -1956,18 +1946,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // TEMPORARY TEST: Return simple Hello page
+    // Serve white-label HTML with project guides
+    const theme = mapping.theme || {};
     const html = `
 <!DOCTYPE html>
-<html>
-<head><title>Test</title></head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guides</title>
+    <style>
+        :root {
+            --primary: ${theme.primary || '#3b82f6'};
+            --secondary: ${theme.secondary || '#f3f4f6'};
+            --background: ${theme.background || '#ffffff'};
+            --text: ${theme.text || '#1f2937'};
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+        }
+        .white-label-container {
+            min-height: 100vh;
+        }
+    </style>
+</head>
 <body>
-    <h1>Hello</h1>
-    <p>Project ID: ${projectId}</p>
-    <p>Domain: ${mapping.domain}</p>
-    <p>Host header: ${req.get('host')}</p>
-    <p>X-Forwarded-Host: ${req.get('x-forwarded-host') || 'none'}</p>
-    <p>Mapping found: YES</p>
+    <div id="root" class="white-label-container">
+        <div data-white-label-project="${projectId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
+    </div>
+    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
     // Prevent CDN caching of white-label content
