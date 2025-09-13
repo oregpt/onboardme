@@ -108,9 +108,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(async (req, res, next) => {
     try {
       // Check forwarded headers for original hostname (Replit proxy forwards the domain here)
-      const hostname = req.get('host')?.split(':')[0] || 
-                      req.get('x-forwarded-host') || 
-                      req.hostname;
+      const forwarded = req.get('x-forwarded-host') || req.get('x-original-host');
+      const rawHost = req.get('host')?.split(':')[0];
+      const hostname = (forwarded || rawHost || req.hostname || '').toLowerCase();
+      
+      console.log('🔍 Domain Resolution Debug:', { 
+        'x-forwarded-host': req.get('x-forwarded-host'),
+        'host': req.get('host'), 
+        'resolved-hostname': hostname 
+      });
       const path = req.path;
       const acceptHeader = req.headers.accept || '';
 
@@ -144,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('🔍 First mapping fields:', allMappingsForDomain[0] ? Object.keys(allMappingsForDomain[0]) : 'no mappings');
         console.log('🔍 First mapping values:', allMappingsForDomain[0] || 'no mappings');
         domainMappings = allMappingsForDomain.filter(m => 
-          m.domain === hostname && m.isActive
+          m.domain?.toLowerCase() === hostname && m.isActive
         );
         console.log('🎯 Matching active mappings for domain:', domainMappings.length);
         
@@ -1976,6 +1982,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
+    // Prevent CDN caching of white-label content
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    res.setHeader('Vary', 'Host, X-Forwarded-Host');
     res.send(html);
   });
 
@@ -2039,6 +2048,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
+    // Prevent CDN caching of white-label content
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    res.setHeader('Vary', 'Host, X-Forwarded-Host');
     res.send(html);
   });
 
@@ -2102,6 +2114,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
 </body>
 </html>`;
+    // Prevent CDN caching of white-label content
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    res.setHeader('Vary', 'Host, X-Forwarded-Host');
     res.send(html);
   });
 
