@@ -46,45 +46,6 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  // Bootstrap domain mappings for deployment
-  async function bootstrapDomainMappings() {
-    try {
-      const { storage } = await import('./storage.js');
-      
-      // Check if guides.canty.ai mapping exists
-      const existingMapping = await storage.getCustomDomainMappingByDomain('guides.canty.ai', '/');
-      
-      if (!existingMapping) {
-        console.log('🚀 Creating bootstrap domain mapping for guides.canty.ai');
-        await storage.createCustomDomainMapping({
-          domain: 'guides.canty.ai',
-          pathPrefix: '/',
-          feature: 'both',
-          routeMode: 'project_guides',
-          projectId: 3,
-          theme: {
-            primary: '#3b82f6',
-            secondary: '#f3f4f6',
-            background: '#ffffff',
-            text: '#1f2937'
-          },
-          seoSettings: {},
-          isActive: true,
-          verifiedAt: new Date(),
-          createdBy: 'system'
-        });
-        console.log('✅ Bootstrap domain mapping created successfully');
-      } else {
-        console.log('✅ Domain mapping for guides.canty.ai already exists');
-      }
-    } catch (error) {
-      console.error('❌ Error bootstrapping domain mappings:', error);
-    }
-  }
-
-  // Run bootstrap
-  await bootstrapDomainMappings();
-
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
