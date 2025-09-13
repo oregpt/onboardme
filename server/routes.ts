@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema, aiSystemPromptUpdateSchema } from "@shared/schema";
+import { insertGuideSchema, insertFlowBoxSchema, insertStepSchema, aiSystemPromptUpdateSchema, type Guide } from "@shared/schema";
 import { AIService, KnowledgeContext, type AIProvider, type ConversationContext } from "./aiService";
 import { z } from "zod";
 import crypto from "crypto";
@@ -112,11 +112,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawHost = req.get('host')?.split(':')[0];
       const hostname = (forwarded || rawHost || req.hostname || '').toLowerCase();
       
-      console.log('🔍 Domain Resolution Debug:', { 
-        'x-forwarded-host': req.get('x-forwarded-host'),
-        'host': req.get('host'), 
-        'resolved-hostname': hostname 
-      });
       const path = req.path;
       const acceptHeader = req.headers.accept || '';
 
@@ -273,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Clean up expired entries every 5 minutes
   setInterval(() => {
     const now = Date.now();
-    for (const [key, entry] of rateLimitStore.entries()) {
+    for (const [key, entry] of Array.from(rateLimitStore.entries())) {
       if (now - entry.windowStart > 60000) { // 1 minute window
         rateLimitStore.delete(key);
       }
@@ -1716,20 +1711,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
          Help users with questions about the content and provide step-by-step guidance.
          Be friendly, concise, and focus on actionable advice.`;
 
-      const response = await aiService.generateChatResponse(
-        assistantPrompt,
-        message,
-        provider || 'claude',
-        context
+      // Build chat messages array
+      const messages = [{
+        role: 'user' as const,
+        content: message
+      }];
+
+      const aiResponse = await AIService.generateResponse(
+        messages,
+        context,
+        provider === 'openai' ? 'openai' : provider === 'xai' ? 'xai' : 'anthropic'
       );
+      
+      const response = aiResponse.content;
 
       // Save Q&A without user info for public endpoints
-      await storage.createQAEntry({
+      await storage.createQAConversation({
         guideId,
         question: message,
-        answer: response,
-        userId: null,
-        flowBoxId: flowBoxId || null,
+        aiResponse: response,
+        userId: 'anonymous',
         stepId: stepId || null
       });
 
