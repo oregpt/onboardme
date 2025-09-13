@@ -107,7 +107,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Custom domain routing middleware
   app.use(async (req, res, next) => {
     try {
-      const hostname = req.hostname;
+      // Check forwarded headers for original hostname (Replit proxy forwards the domain here)
+      const hostname = req.get('x-forwarded-host') || 
+                      req.get('x-original-host') || 
+                      req.get('host')?.split(':')[0] || 
+                      req.hostname;
       const path = req.path;
       const acceptHeader = req.headers.accept || '';
 
@@ -125,7 +129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return next();
       }
 
-      console.log('🌐 Custom Domain Check:', { hostname: hostname.substring(0, 20) + (hostname.length > 20 ? '...' : ''), path });
+      console.log('🌐 Custom Domain Check:', { 
+        hostname: hostname.substring(0, 50) + (hostname.length > 50 ? '...' : ''), 
+        path,
+        allHeaders: req.headers
+      });
 
       // Get all mappings for this domain and find the best matching prefix
       let mapping = null;
