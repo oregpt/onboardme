@@ -112,22 +112,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rawHost = req.get('host')?.split(':')[0];
       const hostname = (forwarded || rawHost || req.hostname || '').toLowerCase();
       
-      // Debug: Log domain resolution when accessing guides.canty.ai
-      if (req.get('host')?.includes('canty') || forwarded?.includes('canty')) {
-        console.log('🎯 GUIDES.CANTY.AI REQUEST DEBUG:', {
-          'x-forwarded-host': req.get('x-forwarded-host'),
-          'x-original-host': req.get('x-original-host'),
-          'host': req.get('host'),
-          'forwarded': forwarded,
-          'rawHost': rawHost,
-          'hostname': hostname,
+      // Debug: Log ALL headers for root path requests to find guides.canty.ai
+      if (path === '/') {
+        console.log('🎯 ROOT PATH REQUEST DEBUG:', {
           'path': req.path,
-          'allHeaders': Object.keys(req.headers).reduce((acc, key) => {
-            if (key.toLowerCase().includes('host') || key.toLowerCase().includes('forward')) {
-              acc[key] = req.headers[key];
-            }
-            return acc;
-          }, {} as Record<string, any>)
+          'method': req.method,
+          'hostname': hostname,
+          'allHeaders': req.headers
         });
       }
       
