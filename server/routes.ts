@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const acceptHeader = req.headers.accept || '';
 
       // Skip API routes, asset/HMR paths, and white-label routes - let them be handled directly
-      if (path.startsWith('/api/') || 
+      const shouldSkip = path.startsWith('/api/') || 
           path.startsWith('/assets/') || 
           path.startsWith('/src/') || // Skip Vite dev server source files
           path.startsWith('/@vite/') || 
@@ -125,7 +125,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           path.startsWith('/robots.txt') ||
           path.startsWith('/manifest.webmanifest') ||
           path.includes('.') || // Any path with file extension
-          (req.method === 'GET' && !acceptHeader.includes('text/html'))) {
+          (req.method === 'GET' && !acceptHeader.includes('text/html'));
+      
+      if (shouldSkip) {
         return next();
       }
 
@@ -1948,6 +1950,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Serve white-label HTML with project guides
     const theme = mapping.theme || {};
+    
+    // Use different assets for development vs production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const scriptSrc = isDevelopment 
+      ? '/src/white-label-entry.tsx' 
+      : '/assets/index-CKqQPqzx.js';
+    const styleSrc = isDevelopment 
+      ? '/src/index.css' 
+      : '/assets/index-BY7WjYI1.css';
+    
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -1973,13 +1985,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             min-height: 100vh;
         }
     </style>
+    ${isDevelopment ? '' : `<link rel="stylesheet" crossorigin href="${styleSrc}">`}
 </head>
 <body>
     <div id="root" class="white-label-container">
         <div data-white-label-project="${projectId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
     </div>
-    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
+    <script type="module" crossorigin src="${scriptSrc}"></script>
 </body>
 </html>`;
     // Prevent CDN caching of white-label content
@@ -2013,6 +2025,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
+    // Use different assets for development vs production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const scriptSrc = isDevelopment 
+      ? '/src/white-label-entry.tsx' 
+      : '/assets/index-CKqQPqzx.js';
+    const styleSrc = isDevelopment 
+      ? '/src/index.css' 
+      : '/assets/index-BY7WjYI1.css';
+    
     const theme = mapping.theme || {};
     const html = `
 <!DOCTYPE html>
@@ -2044,8 +2065,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div id="root" class="white-label-container">
         <div data-white-label-guide="${guideId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
     </div>
-    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
+    <script type="module" crossorigin src="${scriptSrc}"></script>
+    ${isDevelopment ? '' : `<link rel="stylesheet" crossorigin href="${styleSrc}">`}
 </body>
 </html>`;
     // Prevent CDN caching of white-label content
@@ -2079,6 +2100,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
+    // Use different assets for development vs production
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const scriptSrc = isDevelopment 
+      ? '/src/white-label-entry.tsx' 
+      : '/assets/index-CKqQPqzx.js';
+    const styleSrc = isDevelopment 
+      ? '/src/index.css' 
+      : '/assets/index-BY7WjYI1.css';
+    
     const theme = mapping.theme || {};
     const html = `
 <!DOCTYPE html>
@@ -2110,8 +2140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <div id="root" class="white-label-container">
         <div data-white-label-slug="${slug}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}' data-project-id="${mapping.projectId}"></div>
     </div>
-    <script type="module" crossorigin src="/assets/index-CKqQPqzx.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BY7WjYI1.css">
+    <script type="module" crossorigin src="${scriptSrc}"></script>
+    ${isDevelopment ? '' : `<link rel="stylesheet" crossorigin href="${styleSrc}">`}
 </body>
 </html>`;
     // Prevent CDN caching of white-label content
