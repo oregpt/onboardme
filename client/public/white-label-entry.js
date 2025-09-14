@@ -47,6 +47,12 @@
       this.flowBoxes = [];
       this.steps = [];
       
+      // Chat functionality
+      this.chatMessages = [];
+      this.chatLoading = false;
+      this.chatEnabled = this.features === 'both' || this.features === 'chat';
+      
+      
       this.init();
     }
 
@@ -136,16 +142,16 @@
           display: flex; 
           align-items: center; 
           justify-content: center;
-          background-color: ${this.theme.background || '#ffffff'};
-          color: ${this.theme.text || '#000000'};
+          background-color: var(--background, #ffffff);
+          color: var(--text, #000000);
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         ">
           <div style="text-align: center;">
             <div style="
               width: 40px; 
               height: 40px; 
-              border: 3px solid ${this.theme.secondary || '#f3f4f6'}; 
-              border-top: 3px solid ${this.theme.primary || '#3b82f6'}; 
+              border: 3px solid var(--secondary, #f3f4f6); 
+              border-top: 3px solid var(--primary, #3b82f6); 
               border-radius: 50%; 
               animation: spin 1s linear infinite;
               margin: 0 auto 1rem;
@@ -169,8 +175,8 @@
           display: flex; 
           align-items: center; 
           justify-content: center;
-          background-color: ${this.theme.background || '#ffffff'};
-          color: ${this.theme.text || '#000000'};
+          background-color: var(--background, #ffffff);
+          color: var(--text, #000000);
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         ">
           <div style="text-align: center;">
@@ -188,16 +194,31 @@
     render() {
       const guideNavigation = this.guides.length > 1 ? this.renderGuideNavigation() : '';
       const guideContent = this.renderGuideContent();
+      const chatInterface = this.chatEnabled ? this.renderChatInterface() : '';
       
       this.container.innerHTML = `
         <div style="
           min-height: 100vh; 
-          background-color: ${this.theme.background || '#ffffff'};
-          color: ${this.theme.text || '#000000'};
+          background-color: var(--background, #ffffff);
+          color: var(--text, #000000);
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          display: flex;
+          flex-direction: column;
         ">
           ${guideNavigation}
-          ${guideContent}
+          <div style="
+            display: flex;
+            flex: 1;
+            min-height: 0;
+          ">
+            <div style="
+              flex: 1;
+              overflow-y: auto;
+            ">
+              ${guideContent}
+            </div>
+            ${chatInterface}
+          </div>
         </div>
       `;
       
@@ -211,9 +232,9 @@
           style="
             padding: 8px 16px;
             margin: 0 4px;
-            background-color: ${index === this.currentGuideIndex ? (this.theme.primary || '#3b82f6') : 'transparent'};
-            color: ${index === this.currentGuideIndex ? '#ffffff' : (this.theme.text || '#000000')};
-            border: 1px solid ${this.theme.primary || '#3b82f6'};
+            background-color: ${index === this.currentGuideIndex ? 'var(--primary, #3b82f6)' : 'transparent'};
+            color: ${index === this.currentGuideIndex ? '#ffffff' : 'var(--text, #000000)'};
+            border: 1px solid var(--primary, #3b82f6);
             border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
@@ -226,8 +247,8 @@
       return `
         <div style="
           padding: 16px;
-          background-color: ${this.theme.secondary || '#f9fafb'};
-          border-bottom: 1px solid ${this.theme.secondary || '#e5e7eb'};
+          background-color: var(--secondary, #f9fafb);
+          border-bottom: 1px solid var(--secondary, #e5e7eb);
         ">
           <div style="max-width: 1200px; margin: 0 auto;">
             <h2 style="margin: 0 0 12px 0; font-size: 18px; font-weight: 600;">
@@ -258,7 +279,7 @@
               font-size: 2.5rem; 
               font-weight: bold; 
               margin: 0 0 16px 0; 
-              color: ${this.theme.text || '#000000'};
+              color: var(--text, #000000);
             ">
               ${this.escapeHtml(this.currentGuide.title)}
             </h1>
@@ -266,7 +287,7 @@
               <p style="
                 font-size: 1.125rem; 
                 line-height: 1.6; 
-                color: ${this.theme.text || '#666666'};
+                color: var(--text, #666666);
                 max-width: 800px;
                 margin: 0 auto;
               ">
@@ -282,6 +303,129 @@
       `;
     }
 
+    renderChatInterface() {
+      const messagesHtml = this.chatMessages.map(message => `
+        <div style="
+          margin-bottom: 16px;
+          display: flex;
+          ${message.role === 'user' ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
+        ">
+          <div style="
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            ${message.role === 'user' 
+              ? 'background-color: var(--primary, #3b82f6); color: white;' 
+              : 'background-color: var(--secondary, #f1f5f9); color: var(--text, #000000);'
+            }
+            word-wrap: break-word;
+          ">
+            ${this.formatContent(message.content)}
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div style="
+          width: min(400px, 40vw);
+          min-width: 300px;
+          border-left: 1px solid var(--secondary, #e5e7eb);
+          display: flex;
+          flex-direction: column;
+          background-color: var(--background, #ffffff);
+        ">
+          <div style="
+            padding: 16px;
+            border-bottom: 1px solid var(--secondary, #e5e7eb);
+            background-color: var(--secondary, #f9fafb);
+          ">
+            <h3 style="
+              margin: 0;
+              font-size: 18px;
+              font-weight: 600;
+              color: var(--text, #000000);
+            ">
+              💬 Ask Questions
+            </h3>
+            <p style="
+              margin: 4px 0 0 0;
+              font-size: 14px;
+              color: var(--text, #666666);
+            ">
+              Get help with this guide
+            </p>
+          </div>
+          
+          <div 
+            id="chat-messages" 
+            style="
+              flex: 1;
+              padding: 16px;
+              overflow-y: auto;
+              min-height: 200px;
+            "
+          >
+            ${messagesHtml}
+            ${this.chatLoading ? `
+              <div style="
+                margin-bottom: 16px;
+                display: flex;
+                justify-content: flex-start;
+              ">
+                <div style="
+                  padding: 12px 16px;
+                  border-radius: 12px;
+                  background-color: var(--secondary, #f1f5f9);
+                  color: var(--text, #666666);
+                ">
+                  <span>Thinking...</span>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          
+          <div style="
+            padding: 16px;
+            border-top: 1px solid var(--secondary, #e5e7eb);
+          ">
+            <div style="display: flex; gap: 8px;">
+              <input 
+                type="text" 
+                id="chat-input" 
+                placeholder="Ask a question about this guide..."
+                style="
+                  flex: 1;
+                  padding: 12px;
+                  border: 1px solid var(--secondary, #e5e7eb);
+                  border-radius: 6px;
+                  font-size: 14px;
+                  outline: none;
+                  background-color: var(--background, #ffffff);
+                  color: var(--text, #000000);
+                "
+              />
+              <button 
+                id="chat-send" 
+                style="
+                  padding: 12px 16px;
+                  background-color: var(--primary, #3b82f6);
+                  color: white;
+                  border: none;
+                  border-radius: 6px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  font-weight: 500;
+                "
+                ${this.chatLoading ? 'disabled' : ''}
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     renderFlowBox(flowBox) {
       const flowBoxSteps = this.steps
         .filter(step => step.flowBoxId === flowBox.id)
@@ -292,27 +436,27 @@
       return `
         <div style="
           margin-bottom: 32px;
-          border: 1px solid ${this.theme.secondary || '#e5e7eb'};
+          border: 1px solid var(--secondary, #e5e7eb);
           border-radius: 8px;
           overflow: hidden;
         ">
           <div style="
             padding: 20px;
-            background-color: ${this.theme.secondary || '#f9fafb'};
-            border-bottom: 1px solid ${this.theme.secondary || '#e5e7eb'};
+            background-color: var(--secondary, #f9fafb);
+            border-bottom: 1px solid var(--secondary, #e5e7eb);
           ">
             <h3 style="
               font-size: 1.5rem;
               font-weight: 600;
               margin: 0;
-              color: ${this.theme.text || '#000000'};
+              color: var(--text, #000000);
             ">
               ${this.escapeHtml(flowBox.title)}
             </h3>
             ${flowBox.description ? `
               <p style="
                 margin: 8px 0 0 0;
-                color: ${this.theme.text || '#666666'};
+                color: var(--text, #666666);
                 line-height: 1.6;
               ">
                 ${this.escapeHtml(flowBox.description)}
@@ -331,13 +475,13 @@
       return `
         <div style="
           padding: 20px;
-          border-bottom: 1px solid ${this.theme.secondary || '#e5e7eb'};
+          border-bottom: 1px solid var(--secondary, #e5e7eb);
         ">
           <h4 style="
             font-size: 1.25rem;
             font-weight: 600;
             margin: 0 0 12px 0;
-            color: ${this.theme.text || '#000000'};
+            color: var(--text, #000000);
           ">
             ${this.escapeHtml(step.title)}
           </h4>
@@ -345,7 +489,7 @@
           ${step.content ? `
             <div style="
               line-height: 1.6;
-              color: ${this.theme.text || '#374151'};
+              color: var(--text, #374151);
             ">
               ${this.formatContent(step.content)}
             </div>
@@ -360,7 +504,7 @@
               font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
               font-size: 14px;
               overflow-x: auto;
-              border-left: 4px solid ${this.theme.primary || '#3b82f6'};
+              border-left: 4px solid var(--primary, #3b82f6);
             ">
               <pre style="margin: 0; white-space: pre-wrap;">${this.escapeHtml(step.codeSnippet)}</pre>
             </div>
@@ -394,6 +538,30 @@
           this.switchToGuide(index);
         });
       });
+
+      // Chat functionality
+      if (this.chatEnabled) {
+        const chatInput = this.container.querySelector('#chat-input');
+        const chatSend = this.container.querySelector('#chat-send');
+        
+        if (chatInput && chatSend) {
+          const sendMessage = () => {
+            const message = chatInput.value.trim();
+            if (message && !this.chatLoading) {
+              this.sendChatMessage(message);
+              chatInput.value = '';
+            }
+          };
+
+          chatSend.addEventListener('click', sendMessage);
+          chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+            }
+          });
+        }
+      }
     }
 
     async switchToGuide(index) {
@@ -401,6 +569,9 @@
       
       this.currentGuideIndex = index;
       this.currentGuide = this.guides[index];
+      
+      // Clear chat messages when switching guides
+      this.chatMessages = [];
       
       this.showLoading();
       
@@ -410,6 +581,117 @@
       } catch (error) {
         console.error('Failed to switch guide:', error);
         this.showError('Failed to load guide content');
+      }
+    }
+
+    async sendChatMessage(content) {
+      if (!this.currentGuide || this.chatLoading) return;
+
+      // Add user message to chat
+      this.chatMessages.push({
+        role: 'user',
+        content: content,
+        timestamp: new Date()
+      });
+
+      this.chatLoading = true;
+      this.updateChatInterface();
+
+      try {
+        const response = await fetch('/public/ai/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: content,
+            guideId: this.currentGuide.id,
+            selectedFlow: 'all',
+            provider: 'anthropic'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get AI response');
+        }
+
+        const data = await response.json();
+
+        // Add AI response to chat
+        this.chatMessages.push({
+          role: 'assistant',
+          content: data.content || 'Sorry, I could not generate a response.',
+          timestamp: new Date()
+        });
+
+      } catch (error) {
+        console.error('Chat error:', error);
+        
+        // Add error message to chat
+        this.chatMessages.push({
+          role: 'assistant',
+          content: 'Sorry, I encountered an error while processing your question. Please try again.',
+          timestamp: new Date()
+        });
+      }
+
+      this.chatLoading = false;
+      this.updateChatInterface();
+    }
+
+    updateChatInterface() {
+      if (!this.chatEnabled) return;
+
+      const chatMessagesContainer = this.container.querySelector('#chat-messages');
+      const chatSendButton = this.container.querySelector('#chat-send');
+      
+      if (chatMessagesContainer) {
+        const messagesHtml = this.chatMessages.map(message => `
+          <div style="
+            margin-bottom: 16px;
+            display: flex;
+            ${message.role === 'user' ? 'justify-content: flex-end;' : 'justify-content: flex-start;'}
+          ">
+            <div style="
+              max-width: 80%;
+              padding: 12px 16px;
+              border-radius: 12px;
+              ${message.role === 'user' 
+                ? 'background-color: var(--primary, #3b82f6); color: white;' 
+                : 'background-color: var(--secondary, #f1f5f9); color: var(--text, #000000);'
+              }
+              word-wrap: break-word;
+            ">
+              ${this.formatContent(message.content)}
+            </div>
+          </div>
+        `).join('');
+
+        const loadingHtml = this.chatLoading ? `
+          <div style="
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: flex-start;
+          ">
+            <div style="
+              padding: 12px 16px;
+              border-radius: 12px;
+              background-color: var(--secondary, #f1f5f9);
+              color: var(--text, #666666);
+            ">
+              <span>Thinking...</span>
+            </div>
+          </div>
+        ` : '';
+
+        chatMessagesContainer.innerHTML = messagesHtml + loadingHtml;
+        
+        // Scroll to bottom
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+      }
+
+      if (chatSendButton) {
+        chatSendButton.disabled = this.chatLoading;
       }
     }
   }
