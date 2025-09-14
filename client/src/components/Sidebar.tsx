@@ -41,21 +41,9 @@ export function Sidebar({ onMobileClose, isWhiteLabel = false, whiteLabelConfig 
 
   // Define navigation items based on user role or white-label mode
   const getNavItems = () => {
-    // White-label mode: Only show Guides and Chat
+    // White-label mode: Only show Guides (Chat is integrated into guide steps)
     if (isWhiteLabel) {
-      const whiteLabelItems = [
-        { href: "/guides", icon: Book, label: "Guides" },
-        { href: "/chat", icon: MessageCircle, label: "Chat" }
-      ];
-      
-      // Only show features enabled in the white-label config
-      if (whiteLabelConfig?.features === 'guides') {
-        return [{ href: "/guides", icon: Book, label: "Guides" }];
-      } else if (whiteLabelConfig?.features === 'chat') {
-        return [{ href: "/chat", icon: MessageCircle, label: "Chat" }];
-      }
-      
-      return whiteLabelItems; // Default: show both
+      return [{ href: "/guides", icon: Book, label: "Guides" }];
     }
 
     // Regular mode: Role-based navigation
