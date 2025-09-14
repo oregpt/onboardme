@@ -1951,11 +1951,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Serve white-label HTML with project guides
     const theme = mapping.theme || {};
     
-    // Use different assets for development vs production
+    // Use simple JavaScript file that works without transformation
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const scriptSrc = isDevelopment 
-      ? '/src/white-label-entry.tsx' 
-      : '/assets/index-CKqQPqzx.js';
+    const scriptSrc = '/white-label-entry.js';
     const styleSrc = isDevelopment 
       ? '/src/index.css' 
       : '/assets/index-BY7WjYI1.css';
@@ -2025,11 +2023,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // Use different assets for development vs production
+    // Use simple JavaScript file that works without transformation
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const scriptSrc = isDevelopment 
-      ? '/src/white-label-entry.tsx' 
-      : '/assets/index-CKqQPqzx.js';
+    const scriptSrc = '/white-label-entry.js';
     const styleSrc = isDevelopment 
       ? '/src/index.css' 
       : '/assets/index-BY7WjYI1.css';
@@ -2100,11 +2096,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // Use different assets for development vs production
+    // Use simple JavaScript file that works without transformation
     const isDevelopment = process.env.NODE_ENV === 'development';
-    const scriptSrc = isDevelopment 
-      ? '/src/white-label-entry.tsx' 
-      : '/assets/index-CKqQPqzx.js';
+    const scriptSrc = '/white-label-entry.js';
     const styleSrc = isDevelopment 
       ? '/src/index.css' 
       : '/assets/index-BY7WjYI1.css';

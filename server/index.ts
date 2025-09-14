@@ -54,15 +54,29 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Add middleware to handle white-label entry before Vite catch-all
-  app.use('/src/white-label-entry.tsx', (req, res, next) => {
-    // For white-label entry requests from custom domains, ensure they bypass HTML fallback
+  // Direct handler for white-label entry to bypass Vite catch-all issues
+  app.get('/src/white-label-entry.tsx', async (req, res, next) => {
     const hostname = req.get('host')?.split(':')[0] || '';
     const isCustomDomain = hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('replit');
     
     if (isCustomDomain) {
-      // Force this request to be handled by Vite dev middleware, not HTML fallback
-      res.setHeader('X-Bypass-HTML-Fallback', 'true');
+      try {
+        // Directly serve the transformed white-label entry for custom domains
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        const filePath = path.resolve(import.meta.dirname, '..', 'client', 'src', 'white-label-entry.tsx');
+        
+        if (fs.existsSync(filePath)) {
+          const content = await fs.promises.readFile(filePath, 'utf-8');
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.send(content);
+          return;
+        }
+      } catch (error) {
+        console.error('Error serving white-label entry:', error);
+      }
     }
     next();
   });
