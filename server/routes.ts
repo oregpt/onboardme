@@ -1330,34 +1330,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // For custom domain embedding
   // ==========================================
 
+  // Middleware to ensure domain mapping exists and is valid for all public routes
+  app.use('/public/*', async (req, res, next) => {
+    try {
+      const hostname = (req.get('host')?.split(':')[0] || 
+                       req.get('x-forwarded-host') || 
+                       req.hostname || '').toLowerCase();
+      
+      console.log('🔍 Public API domain check for:', hostname);
+      
+      if (!res.locals.domainMapping) {
+        const allMappings = await storage.getCustomDomainMappings();
+        const domainMapping = allMappings.find(m => 
+          m.domain?.toLowerCase() === hostname && m.isActive
+        );
+        
+        if (domainMapping) {
+          res.locals.domainMapping = domainMapping;
+          console.log('✅ Domain mapping set for public API:', domainMapping.domain);
+        } else {
+          console.log('❌ No domain mapping found for:', hostname);
+          // SECURITY: Reject requests without valid domain mapping to prevent data leaks
+          return res.status(404).json({ message: "Resource not found" });
+        }
+      }
+      
+      // Additional security: Ensure the mapping has required fields
+      const mapping = res.locals.domainMapping;
+      if (!mapping || !mapping.isActive) {
+        console.log('❌ Invalid or inactive domain mapping');
+        return res.status(404).json({ message: "Resource not found" });
+      }
+      
+    } catch (error) {
+      console.error('Error validating domain mapping for public API:', error);
+      return res.status(404).json({ message: "Resource not found" });
+    }
+    next();
+  });
+
   // Get public guide by ID (domain-scoped)
   app.get('/public/guide/:id', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate ID parameter
+      if (isNaN(id) || id <= 0) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      const guide = await storage.getGuide(id);
-      
-      if (!guide || !guide.isPublic) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+      // SECURITY: Domain mapping is guaranteed to exist by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Enforce domain scoping based on route mode
+      // SECURITY: Get guide and validate existence before any scoping checks
+      const guide = await storage.getGuide(id);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Enforce strict domain scoping based on route mode
       if (mapping.routeMode === 'single_guide') {
-        // Single guide mode: only allow the specific guide ID
-        if (mapping.guideId && id !== mapping.guideId) {
+        // Single guide mode: MUST have guideId and MUST match exactly
+        if (!mapping.guideId || id !== mapping.guideId) {
           return res.status(404).json({ message: "Guide not found" });
         }
       } else if (mapping.routeMode === 'project_guides') {
-        // Project guides mode: only allow guides from the mapped project
-        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+        // Project guides mode: MUST have projectId and guide MUST belong to that project
+        if (!mapping.projectId || guide.projectId !== mapping.projectId) {
           return res.status(404).json({ message: "Guide not found" });
         }
+      } else {
+        // SECURITY: Unknown route mode - reject
+        return res.status(404).json({ message: "Guide not found" });
       }
       
       res.json(guide);
@@ -1373,36 +1420,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const slug = req.params.slug;
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate slug parameter
+      if (!slug || typeof slug !== 'string' || slug.trim().length === 0) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Domain mapping is guaranteed by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
       let guide: Guide | undefined;
       
-      // Enforce domain scoping based on route mode
+      // SECURITY: Enforce strict domain scoping based on route mode
       if (mapping.routeMode === 'single_guide') {
-        // Single guide mode: must match defaultGuideSlug AND guideId
-        if (!mapping.defaultGuideSlug || slug !== mapping.defaultGuideSlug) {
+        // Single guide mode: MUST have defaultGuideSlug AND guideId, slug MUST match exactly
+        if (!mapping.defaultGuideSlug || !mapping.guideId || slug !== mapping.defaultGuideSlug) {
           return res.status(404).json({ message: "Guide not found" });
         }
-        // Get the guide and verify it matches the mapping's guideId
+        // Get the guide and verify it matches BOTH the mapping's guideId AND slug
         guide = await storage.getGuide(mapping.guideId);
-        if (!guide || guide.slug !== slug) {
+        if (!guide || guide.slug !== slug || guide.id !== mapping.guideId) {
           return res.status(404).json({ message: "Guide not found" });
         }
       } else if (mapping.routeMode === 'project_guides') {
-        // Project guides mode: scope lookup to the mapped project
+        // Project guides mode: MUST have projectId, scope lookup to the mapped project ONLY
         if (!mapping.projectId) {
           return res.status(404).json({ message: "Guide not found" });
         }
         guide = await storage.getGuideBySlug(slug, mapping.projectId);
+        // SECURITY: Double-check that returned guide belongs to the correct project
+        if (guide && guide.projectId !== mapping.projectId) {
+          return res.status(404).json({ message: "Guide not found" });
+        }
       } else {
+        // SECURITY: Unknown route mode - reject
         return res.status(404).json({ message: "Guide not found" });
       }
       
+      // SECURITY: Final validation - guide must exist and be public
       if (!guide || !guide.isPublic) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+        return res.status(404).json({ message: "Guide not found" });
       }
       
       res.json(guide);
@@ -1419,27 +1477,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const slug = req.params.slug;
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate parameters
+      if (isNaN(projectId) || projectId <= 0 || !slug || typeof slug !== 'string' || slug.trim().length === 0) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Enforce domain scoping: only allow access to guides from the mapped project
+      // SECURITY: Domain mapping is guaranteed by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Enforce STRICT domain scoping - ONLY project_guides mode allowed for this route
       if (mapping.routeMode !== 'project_guides' || 
           !mapping.projectId || 
           projectId !== mapping.projectId) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      const guides = await storage.getGuides();
-      const guide = guides.find(g => 
-        g.projectId === projectId && 
-        g.slug === slug && 
-        g.isPublic
-      );
+      // SECURITY: Use more efficient and secure lookup method
+      const guide = await storage.getGuideBySlug(slug, projectId);
       
-      if (!guide) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+      // SECURITY: Triple validation - guide must exist, be public, and belong to correct project
+      if (!guide || !guide.isPublic || guide.projectId !== projectId || guide.projectId !== mapping.projectId) {
+        return res.status(404).json({ message: "Guide not found" });
       }
       
       res.json(guide);
@@ -1485,28 +1545,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate guideId parameter
+      if (isNaN(guideId) || guideId <= 0) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Verify guide is public
-      const guide = await storage.getGuide(guideId);
-      if (!guide || !guide.isPublic) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+      // SECURITY: Domain mapping is guaranteed by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Enforce domain scoping based on route mode
+      // SECURITY: Get guide and validate existence and accessibility BEFORE domain scoping
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Enforce STRICT domain scoping based on route mode
       if (mapping.routeMode === 'single_guide') {
-        if (mapping.guideId && guideId !== mapping.guideId) {
+        // Single guide mode: MUST have guideId and MUST match exactly
+        if (!mapping.guideId || guideId !== mapping.guideId) {
           return res.status(404).json({ message: "Guide not found" });
         }
       } else if (mapping.routeMode === 'project_guides') {
-        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+        // Project guides mode: MUST have projectId and guide MUST belong to that project
+        if (!mapping.projectId || guide.projectId !== mapping.projectId) {
           return res.status(404).json({ message: "Guide not found" });
         }
+      } else {
+        // SECURITY: Unknown route mode - reject
+        return res.status(404).json({ message: "Guide not found" });
       }
       
+      // SECURITY: Only fetch flow boxes after all validations pass
       const flowBoxes = await storage.getFlowBoxesByGuide(guideId);
       res.json(flowBoxes);
     } catch (error) {
@@ -1521,28 +1592,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate guideId parameter
+      if (isNaN(guideId) || guideId <= 0) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Verify guide is public
-      const guide = await storage.getGuide(guideId);
-      if (!guide || !guide.isPublic) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+      // SECURITY: Domain mapping is guaranteed by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Enforce domain scoping based on route mode
+      // SECURITY: Get guide and validate existence and accessibility BEFORE domain scoping
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Enforce STRICT domain scoping based on route mode
       if (mapping.routeMode === 'single_guide') {
-        if (mapping.guideId && guideId !== mapping.guideId) {
+        // Single guide mode: MUST have guideId and MUST match exactly
+        if (!mapping.guideId || guideId !== mapping.guideId) {
           return res.status(404).json({ message: "Guide not found" });
         }
       } else if (mapping.routeMode === 'project_guides') {
-        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+        // Project guides mode: MUST have projectId and guide MUST belong to that project
+        if (!mapping.projectId || guide.projectId !== mapping.projectId) {
           return res.status(404).json({ message: "Guide not found" });
         }
+      } else {
+        // SECURITY: Unknown route mode - reject
+        return res.status(404).json({ message: "Guide not found" });
       }
       
+      // SECURITY: Only fetch steps after all validations pass
       const steps = await storage.getStepsByGuide(guideId);
       res.json(steps);
     } catch (error) {
@@ -1557,28 +1639,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate guideId parameter
+      if (isNaN(guideId) || guideId <= 0) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Verify guide is public
-      const guide = await storage.getGuide(guideId);
-      if (!guide || !guide.isPublic) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+      // SECURITY: Domain mapping is guaranteed by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Enforce domain scoping based on route mode
+      // SECURITY: Get guide and validate existence and accessibility BEFORE domain scoping
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Enforce STRICT domain scoping based on route mode
       if (mapping.routeMode === 'single_guide') {
-        if (mapping.guideId && guideId !== mapping.guideId) {
+        // Single guide mode: MUST have guideId and MUST match exactly
+        if (!mapping.guideId || guideId !== mapping.guideId) {
           return res.status(404).json({ message: "Guide not found" });
         }
       } else if (mapping.routeMode === 'project_guides') {
-        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+        // Project guides mode: MUST have projectId and guide MUST belong to that project
+        if (!mapping.projectId || guide.projectId !== mapping.projectId) {
           return res.status(404).json({ message: "Guide not found" });
         }
+      } else {
+        // SECURITY: Unknown route mode - reject
+        return res.status(404).json({ message: "Guide not found" });
       }
       
+      // SECURITY: Only fetch Q&A after all validations pass
       const conversations = await storage.getQAByGuide(guideId);
       res.json(conversations);
     } catch (error) {
@@ -1593,28 +1686,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
       
-      // Ensure we have domain mapping context and guides feature is enabled
-      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+      // SECURITY: Validate guideId parameter
+      if (isNaN(guideId) || guideId <= 0) {
         return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Verify guide is public
-      const guide = await storage.getGuide(guideId);
-      if (!guide || !guide.isPublic) {
-        return res.status(404).json({ message: "Guide not found or not public" });
+      // SECURITY: Domain mapping is guaranteed by middleware, but double-check
+      if (!mapping || !mapping.isActive || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        return res.status(404).json({ message: "Guide not found" });
       }
       
-      // Enforce domain scoping based on route mode
+      // SECURITY: Get guide and validate existence and accessibility BEFORE domain scoping
+      const guide = await storage.getGuide(guideId);
+      if (!guide || !guide.isPublic) {
+        return res.status(404).json({ message: "Guide not found" });
+      }
+      
+      // SECURITY: Enforce STRICT domain scoping based on route mode
       if (mapping.routeMode === 'single_guide') {
-        if (mapping.guideId && guideId !== mapping.guideId) {
+        // Single guide mode: MUST have guideId and MUST match exactly
+        if (!mapping.guideId || guideId !== mapping.guideId) {
           return res.status(404).json({ message: "Guide not found" });
         }
       } else if (mapping.routeMode === 'project_guides') {
-        if (mapping.projectId && guide.projectId !== mapping.projectId) {
+        // Project guides mode: MUST have projectId and guide MUST belong to that project
+        if (!mapping.projectId || guide.projectId !== mapping.projectId) {
           return res.status(404).json({ message: "Guide not found" });
         }
+      } else {
+        // SECURITY: Unknown route mode - reject
+        return res.status(404).json({ message: "Guide not found" });
       }
       
+      // SECURITY: Only fetch knowledge after all validations pass
       const knowledge = await storage.getKnowledgeByGuide(guideId);
       res.json(knowledge);
     } catch (error) {
