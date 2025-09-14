@@ -56,6 +56,11 @@ app.use((req, res, next) => {
 
   // Direct handler for white-label entry to bypass Vite catch-all issues
   app.get('/src/white-label-entry.tsx', async (req, res, next) => {
+    // Skip all API routes to prevent interference with API handlers
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
+    
     const hostname = req.get('host')?.split(':')[0] || '';
     const isCustomDomain = hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('replit');
     

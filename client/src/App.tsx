@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLayout } from "@/components/AppLayout";
+import { WhiteLabelProvider, useWhiteLabel } from "@/contexts/WhiteLabelContext";
 import NotFound from "@/pages/not-found";
 import SimpleLanding from "@/pages/SimpleLanding";
 import Dashboard from "@/pages/Dashboard";
@@ -21,10 +22,11 @@ import DatabaseManagement from "@/pages/DatabaseManagement";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { isWhiteLabel, config, isLoading: whiteLabelLoading } = useWhiteLabel();
 
   return (
     <Switch>
-      {isLoading ? (
+      {(isLoading && !isWhiteLabel) || whiteLabelLoading ? (
         <Route>
           {() => (
             <div className="min-h-screen flex items-center justify-center bg-background">
@@ -32,6 +34,17 @@ function Router() {
             </div>
           )}
         </Route>
+      ) : isWhiteLabel ? (
+        // White-label mode: Show only Guides and Chat without authentication
+        <AppLayout isWhiteLabel={true} whiteLabelConfig={config}>
+          <Switch>
+            <Route path="/" component={Guides} />
+            <Route path="/guides" component={Guides} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/guide/:slug" component={GuideViewer} />
+            <Route component={NotFound} />
+          </Switch>
+        </AppLayout>
       ) : !isAuthenticated ? (
         <>
           <Route path="/" component={SimpleLanding} />
@@ -65,10 +78,12 @@ function Router() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router />
-        <Toaster />
-      </TooltipProvider>
+      <WhiteLabelProvider>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </WhiteLabelProvider>
     </QueryClientProvider>
   );
 }

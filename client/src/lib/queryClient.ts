@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { checkDomainMapping } from "@/lib/whiteLabelUtils";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -12,9 +13,30 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  console.log(`API Request: ${method} ${url}`, data ? data : 'no body');
+  // Check for white-label mode and route to public endpoints
+  let requestUrl = url;
+  try {
+    const whiteLabelConfig = await checkDomainMapping();
+    if (whiteLabelConfig.isWhiteLabel && url.startsWith('/api/')) {
+      // Convert authenticated endpoints to public endpoints for white-label mode
+      if (url.startsWith('/api/guides') || 
+          url.startsWith('/api/projects') || 
+          url.startsWith('/api/ai/chat') ||
+          url.startsWith('/api/user-progress')) {
+        requestUrl = url.replace('/api/', '/public/');
+        console.log(`🔄 White-label mode: Routing ${url} → ${requestUrl}`);
+      } else {
+        console.warn(`⚠️ White-label mode: Endpoint ${url} not available in public API`);
+      }
+    }
+  } catch (error) {
+    console.warn('Error checking white-label mode for API routing:', error);
+    // Continue with original URL on error
+  }
   
-  const res = await fetch(url, {
+  console.log(`API Request: ${method} ${requestUrl}`, data ? data : 'no body');
+  
+  const res = await fetch(requestUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -24,12 +46,12 @@ export async function apiRequest(
   // Ensure we're getting JSON responses for API calls
   const contentType = res.headers.get('content-type');
   if (res.ok && !contentType?.includes('application/json')) {
-    console.error(`API call returned HTML instead of JSON: ${method} ${url}`);
+    console.error(`API call returned HTML instead of JSON: ${method} ${requestUrl}`);
     throw new Error(`Server returned HTML instead of JSON - route may not exist`);
   }
 
   await throwIfResNotOk(res);
-  console.log(`API Response: ${method} ${url} - ${res.status}`);
+  console.log(`API Response: ${method} ${requestUrl} - ${res.status}`);
   return res;
 }
 
@@ -39,7 +61,29 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    let url = queryKey.join("/") as string;
+    
+    // Check for white-label mode and route to public endpoints
+    try {
+      const whiteLabelConfig = await checkDomainMapping();
+      if (whiteLabelConfig.isWhiteLabel && url.startsWith('/api/')) {
+        // Convert authenticated endpoints to public endpoints for white-label mode
+        if (url.startsWith('/api/guides') || 
+            url.startsWith('/api/projects') || 
+            url.startsWith('/api/ai/chat') ||
+            url.startsWith('/api/user-progress')) {
+          url = url.replace('/api/', '/public/');
+          console.log(`🔄 White-label query: Routing ${queryKey.join("/")} → ${url}`);
+        } else {
+          console.warn(`⚠️ White-label query: Endpoint ${url} not available in public API`);
+        }
+      }
+    } catch (error) {
+      console.warn('Error checking white-label mode for query routing:', error);
+      // Continue with original URL on error
+    }
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 

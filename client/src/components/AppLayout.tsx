@@ -1,11 +1,14 @@
-import { ReactNode, createContext, useContext, useState } from "react";
+import { ReactNode, createContext, useContext, useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { ProjectSelector } from "./ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import type { WhiteLabelConfig } from "@/lib/whiteLabelUtils";
 
 interface AppLayoutProps {
   children: ReactNode;
+  isWhiteLabel?: boolean;
+  whiteLabelConfig?: WhiteLabelConfig;
 }
 
 // Project context for filtering
@@ -21,9 +24,16 @@ const ProjectContext = createContext<ProjectContextType>({
 
 export const useProjectContext = () => useContext(ProjectContext);
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, isWhiteLabel = false, whiteLabelConfig }: AppLayoutProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Auto-set project context for white-label mode
+  useEffect(() => {
+    if (isWhiteLabel && whiteLabelConfig?.projectId) {
+      setSelectedProjectId(whiteLabelConfig.projectId);
+    }
+  }, [isWhiteLabel, whiteLabelConfig?.projectId]);
 
   return (
     <ProjectContext.Provider value={{ selectedProjectId, setSelectedProjectId }}>
@@ -53,12 +63,17 @@ export function AppLayout({ children }: AppLayoutProps) {
           fixed lg:relative lg:translate-x-0 transition-transform duration-300 ease-in-out z-40
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
-          <Sidebar onMobileClose={() => setIsMobileMenuOpen(false)} />
+          <Sidebar 
+            onMobileClose={() => setIsMobileMenuOpen(false)} 
+            isWhiteLabel={isWhiteLabel}
+            whiteLabelConfig={whiteLabelConfig}
+          />
         </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <ProjectSelector />
+          {/* Hide ProjectSelector in white-label mode */}
+          {!isWhiteLabel && <ProjectSelector />}
           <main className="flex-1 overflow-hidden">
             {children}
           </main>

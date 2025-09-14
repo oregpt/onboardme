@@ -15,18 +15,21 @@ import {
   MessageCircle,
   Sparkles
 } from "lucide-react";
+import type { WhiteLabelConfig } from "@/lib/whiteLabelUtils";
 
 interface SidebarProps {
   onMobileClose?: () => void;
+  isWhiteLabel?: boolean;
+  whiteLabelConfig?: WhiteLabelConfig;
 }
 
-export function Sidebar({ onMobileClose }: SidebarProps) {
+export function Sidebar({ onMobileClose, isWhiteLabel = false, whiteLabelConfig }: SidebarProps) {
   const [location] = useLocation();
   const { user, isAuthenticated } = useAuth();
 
-  // Get user's projects to determine role
+  // Get user's projects to determine role (skip in white-label mode)
   const { data: projects } = useQuery<Array<{id: number, userRole: string}>>(
-    { queryKey: ["/api/projects"], enabled: isAuthenticated }
+    { queryKey: ["/api/projects"], enabled: isAuthenticated && !isWhiteLabel }
   );
 
   // For now, use the first project's role (can be enhanced for multi-project context)
@@ -36,8 +39,26 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
     window.location.href = '/api/logout';
   };
 
-  // Define navigation items based on user role
+  // Define navigation items based on user role or white-label mode
   const getNavItems = () => {
+    // White-label mode: Only show Guides and Chat
+    if (isWhiteLabel) {
+      const whiteLabelItems = [
+        { href: "/guides", icon: Book, label: "Guides" },
+        { href: "/chat", icon: MessageCircle, label: "Chat" }
+      ];
+      
+      // Only show features enabled in the white-label config
+      if (whiteLabelConfig?.features === 'guides') {
+        return [{ href: "/guides", icon: Book, label: "Guides" }];
+      } else if (whiteLabelConfig?.features === 'chat') {
+        return [{ href: "/chat", icon: MessageCircle, label: "Chat" }];
+      }
+      
+      return whiteLabelItems; // Default: show both
+    }
+
+    // Regular mode: Role-based navigation
     const baseItems = [
       { href: "/guides", icon: Book, label: "Guides" },
       { href: "/chat", icon: MessageCircle, label: "Chat" },
@@ -111,37 +132,40 @@ export function Sidebar({ onMobileClose }: SidebarProps) {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-            {user?.profileImageUrl ? (
-              <img 
-                src={user.profileImageUrl} 
-                alt="Profile" 
-                className="w-8 h-8 rounded-full object-cover"
-              />
-            ) : (
-              <User className="w-4 h-4 text-muted-foreground" />
-            )}
+      {/* Hide user profile section in white-label mode */}
+      {!isWhiteLabel && (
+        <div className="p-4 border-t border-border">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+              {user?.profileImageUrl ? (
+                <img 
+                  src={user.profileImageUrl} 
+                  alt="Profile" 
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-4 h-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {user?.firstName || user?.email || "Admin User"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email || "admin@example.com"}
+              </p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleLogout}
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4 text-muted-foreground" />
+            </Button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {user?.firstName || user?.email || "Admin User"}
-            </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.email || "admin@example.com"}
-            </p>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="w-4 h-4 text-muted-foreground" />
-          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

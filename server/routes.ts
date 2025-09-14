@@ -343,6 +343,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Domain info endpoint for white-label detection (public, no auth required)
+  app.get('/api/domain-info', async (req, res) => {
+    console.log('🔍 /api/domain-info handler called!');
+    try {
+      const hostname = (req.get('host')?.split(':')[0] || 
+                       req.get('x-forwarded-host') || 
+                       req.hostname || '').toLowerCase();
+      console.log('🌐 Domain info for hostname:', hostname);
+      
+      // Check for existing domain mapping from middleware
+      let mapping = res.locals.domainMapping;
+      
+      // If not set by middleware, query database
+      if (!mapping) {
+        const allMappings = await storage.getCustomDomainMappings();
+        mapping = allMappings.find(m => 
+          m.domain?.toLowerCase() === hostname && m.isActive
+        );
+      }
+      console.log('📋 Found mapping:', mapping ? 'YES' : 'NO');
+      
+      if (mapping) {
+        const result = {
+          isWhiteLabel: true,
+          domain: mapping.domain,
+          feature: mapping.feature,
+          routeMode: mapping.routeMode,
+          projectId: mapping.projectId,
+          guideId: mapping.guideId,
+          defaultGuideSlug: mapping.defaultGuideSlug,
+          theme: mapping.theme,
+        };
+        console.log('✅ Returning white-label data:', JSON.stringify(result));
+        res.setHeader('Content-Type', 'application/json');
+        return res.json(result);
+      }
+      
+      const result = { isWhiteLabel: false };
+      console.log('✅ Returning normal mode data:', JSON.stringify(result));
+      res.setHeader('Content-Type', 'application/json');
+      return res.json(result);
+    } catch (error) {
+      console.error('❌ Error in /api/domain-info:', error);
+      res.setHeader('Content-Type', 'application/json');
+      return res.json({ isWhiteLabel: false });
+    }
+  });
+
   // Onboarding flow handler
   app.get('/api/onboarding-flow', isAuthenticated, async (req: any, res) => {
     try {
@@ -1325,6 +1373,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HTML template transformation middleware for domain mapping injection
+  // This middleware runs BEFORE Vite middleware and injects domain mapping data into HTML
+  app.use('*', async (req, res, next) => {
+    try {
+      // Only process GET requests for HTML content
+      if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/public/') || req.path.includes('.')) {
+        return next();
+      }
+
+      const hostname = (req.get('host')?.split(':')[0] || 
+                       req.get('x-forwarded-host') || 
+                       req.hostname || '').toLowerCase();
+      
+      console.log('🔍 HTML injection check for:', hostname);
+      
+      // Check if there's already a domain mapping in res.locals (set by earlier middleware)
+      let mapping = res.locals.domainMapping;
+      
+      if (!mapping) {
+        // Look up domain mapping
+        const allMappings = await storage.getCustomDomainMappings();
+        mapping = allMappings.find(m => 
+          m.domain?.toLowerCase() === hostname && m.isActive
+        );
+      }
+      
+      if (mapping && mapping.isActive) {
+        console.log('✅ Domain mapping found for HTML injection:', mapping.domain);
+        
+        // Create safe subset of mapping info for client injection
+        const clientSafeMapping = {
+          domain: mapping.domain,
+          feature: mapping.feature,
+          routeMode: mapping.routeMode,
+          projectId: mapping.projectId,
+          guideId: mapping.guideId,
+          theme: mapping.theme,
+          isWhiteLabel: true
+        };
+        
+        // Store in res.locals for template injection
+        res.locals.whiteLabelConfig = clientSafeMapping;
+        console.log('📝 Stored white-label config for injection');
+      } else {
+        console.log('❌ No domain mapping found for HTML injection');
+        res.locals.whiteLabelConfig = { isWhiteLabel: false };
+      }
+    } catch (error) {
+      console.error('Error in domain mapping HTML injection:', error);
+      res.locals.whiteLabelConfig = { isWhiteLabel: false };
+    }
+    
+    next();
+  });
+
   // ==========================================
   // PUBLIC API ENDPOINTS (No Auth Required)
   // For custom domain embedding
@@ -2052,54 +2155,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // Serve white-label HTML with project guides
-    const theme = mapping.theme || {};
+    // Redirect to React app with white-label context
+    const theme = encodeURIComponent(JSON.stringify(mapping.theme || {}));
+    const redirectUrl = `/?wl=project&projectId=${projectId}&domain=${encodeURIComponent(mapping.domain)}&features=${mapping.feature}&theme=${theme}`;
     
-    // Use simple JavaScript file that works without transformation
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const scriptSrc = '/white-label-entry.js';
-    const styleSrc = isDevelopment 
-      ? '/src/index.css' 
-      : '/assets/index-BY7WjYI1.css';
-    
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guides</title>
-    <style>
-        :root {
-            --primary: ${theme.primary || '#3b82f6'};
-            --secondary: ${theme.secondary || '#f3f4f6'};
-            --background: ${theme.background || '#ffffff'};
-            --text: ${theme.text || '#1f2937'};
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-        }
-        .white-label-container {
-            min-height: 100vh;
-        }
-    </style>
-    ${isDevelopment ? '' : `<link rel="stylesheet" crossorigin href="${styleSrc}">`}
-</head>
-<body>
-    <div id="root" class="white-label-container">
-        <div data-white-label-project="${projectId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
-    </div>
-    <script type="module" crossorigin src="${scriptSrc}"></script>
-</body>
-</html>`;
-    // Prevent CDN caching of white-label content
-    res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    res.setHeader('Vary', 'Host, X-Forwarded-Host');
-    res.send(html);
+    console.log('🔀 Redirecting white-label project to React app:', redirectUrl);
+    res.redirect(redirectUrl);
   });
 
   // White-label single guide interface
@@ -2127,52 +2188,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // Use simple JavaScript file that works without transformation
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const scriptSrc = '/white-label-entry.js';
-    const styleSrc = isDevelopment 
-      ? '/src/index.css' 
-      : '/assets/index-BY7WjYI1.css';
+    // Redirect to React app with white-label context
+    const theme = encodeURIComponent(JSON.stringify(mapping.theme || {}));
+    const redirectUrl = `/?wl=guide&guideId=${guideId}&domain=${encodeURIComponent(mapping.domain)}&features=${mapping.feature}&theme=${theme}`;
     
-    const theme = mapping.theme || {};
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guide</title>
-    <style>
-        :root {
-            --primary: ${theme.primary || '#3b82f6'};
-            --secondary: ${theme.secondary || '#f3f4f6'};
-            --background: ${theme.background || '#ffffff'};
-            --text: ${theme.text || '#1f2937'};
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-        }
-        .white-label-container {
-            min-height: 100vh;
-        }
-    </style>
-</head>
-<body>
-    <div id="root" class="white-label-container">
-        <div data-white-label-guide="${guideId}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}'></div>
-    </div>
-    <script type="module" crossorigin src="${scriptSrc}"></script>
-    ${isDevelopment ? '' : `<link rel="stylesheet" crossorigin href="${styleSrc}">`}
-</body>
-</html>`;
-    // Prevent CDN caching of white-label content
-    res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    res.setHeader('Vary', 'Host, X-Forwarded-Host');
-    res.send(html);
+    console.log('🔀 Redirecting white-label guide to React app:', redirectUrl);
+    res.redirect(redirectUrl);
   });
 
   // White-label guide by slug interface
@@ -2200,52 +2221,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(404).send('Not found');
     }
     
-    // Use simple JavaScript file that works without transformation
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const scriptSrc = '/white-label-entry.js';
-    const styleSrc = isDevelopment 
-      ? '/src/index.css' 
-      : '/assets/index-BY7WjYI1.css';
+    // Redirect to React app with white-label context
+    const theme = encodeURIComponent(JSON.stringify(mapping.theme || {}));
+    const redirectUrl = `/?wl=slug&slug=${encodeURIComponent(slug)}&projectId=${mapping.projectId}&domain=${encodeURIComponent(mapping.domain)}&features=${mapping.feature}&theme=${theme}`;
     
-    const theme = mapping.theme || {};
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guide</title>
-    <style>
-        :root {
-            --primary: ${theme.primary || '#3b82f6'};
-            --secondary: ${theme.secondary || '#f3f4f6'};
-            --background: ${theme.background || '#ffffff'};
-            --text: ${theme.text || '#1f2937'};
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segree UI', Roboto, sans-serif;
-            background-color: var(--background);
-            color: var(--text);
-        }
-        .white-label-container {
-            min-height: 100vh;
-        }
-    </style>
-</head>
-<body>
-    <div id="root" class="white-label-container">
-        <div data-white-label-slug="${slug}" data-features="${mapping.feature}" data-theme='${JSON.stringify(theme)}' data-project-id="${mapping.projectId}"></div>
-    </div>
-    <script type="module" crossorigin src="${scriptSrc}"></script>
-    ${isDevelopment ? '' : `<link rel="stylesheet" crossorigin href="${styleSrc}">`}
-</body>
-</html>`;
-    // Prevent CDN caching of white-label content
-    res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    res.setHeader('Vary', 'Host, X-Forwarded-Host');
-    res.send(html);
+    console.log('🔀 Redirecting white-label slug to React app:', redirectUrl);
+    res.redirect(redirectUrl);
   });
 
   // ==========================================
