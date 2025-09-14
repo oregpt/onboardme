@@ -54,6 +54,19 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Add middleware to handle white-label entry before Vite catch-all
+  app.use('/src/white-label-entry.tsx', (req, res, next) => {
+    // For white-label entry requests from custom domains, ensure they bypass HTML fallback
+    const hostname = req.get('host')?.split(':')[0] || '';
+    const isCustomDomain = hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('replit');
+    
+    if (isCustomDomain) {
+      // Force this request to be handled by Vite dev middleware, not HTML fallback
+      res.setHeader('X-Bypass-HTML-Fallback', 'true');
+    }
+    next();
+  });
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
