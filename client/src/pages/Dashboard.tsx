@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useWhiteLabel } from "@/contexts/WhiteLabelContext";
 import type { Guide } from "@shared/schema";
 import { Plus, MoreHorizontal, Eye, Edit, Trash2, BookOpen, Users, BarChart, Settings } from "lucide-react";
 import {
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId } = useProjectContext();
+  const { isWhiteLabel } = useWhiteLabel();
 
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
@@ -88,7 +90,7 @@ export default function Dashboard() {
                   </Button>
                 </Link>
               )}
-              {(userRole === 'admin' || userRole === 'creator' || user?.isPlatformAdmin) && (
+              {!isWhiteLabel && (userRole === 'admin' || userRole === 'creator' || user?.isPlatformAdmin) && (
                 <Link href="/editor">
                   <Button data-testid="button-create-guide">
                     <Plus className="w-4 h-4 mr-2" />
@@ -183,7 +185,7 @@ export default function Dashboard() {
                         </p>
                         <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
                           <span>Slug: /{guide.slug}</span>
-                          <span>Created: {new Date(guide.createdAt).toLocaleDateString()}</span>
+                          <span>Created: {guide.createdAt ? new Date(guide.createdAt).toLocaleDateString() : 'Unknown'}</span>
                         </div>
                       </div>
                       
@@ -225,16 +227,23 @@ export default function Dashboard() {
               ) : (
                 <div className="text-center py-12">
                   <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold text-foreground mb-2">No guides yet</h3>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {isWhiteLabel ? "No guides available" : "No guides yet"}
+                  </h3>
                   <p className="text-muted-foreground mb-4">
-                    Create your first onboarding guide to get started
+                    {isWhiteLabel 
+                      ? "There are no guides available for this project at the moment."
+                      : "Create your first onboarding guide to get started"
+                    }
                   </p>
-                  <Link href="/editor">
-                    <Button data-testid="button-create-first-guide">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Your First Guide
-                    </Button>
-                  </Link>
+                  {!isWhiteLabel && (
+                    <Link href="/editor">
+                      <Button data-testid="button-create-first-guide">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Your First Guide
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               )}
             </CardContent>
