@@ -10,6 +10,10 @@ export default function SimpleLanding() {
     window.location.href = "/api/login?flow=other";
   };
 
+  const handleATXPGuides = () => {
+    window.location.href = "/api/login?flow=atxp";
+  };
+
   const handleCreateGuide = () => {
     window.location.href = "/api/login?flow=create";
   };
@@ -27,7 +31,7 @@ export default function SimpleLanding() {
           </p>
         </div>
 
-        {/* Three Buttons */}
+        {/* Four Buttons */}
         <div className="space-y-4">
           <Button
             onClick={handleCantyAIGuides}
@@ -36,6 +40,15 @@ export default function SimpleLanding() {
             data-testid="button-cantyai-guides"
           >
             Access CantyAI Guides
+          </Button>
+
+          <Button
+            onClick={handleATXPGuides}
+            variant="outline"
+            className="w-full h-14 text-lg font-medium bg-orange-50/50 hover:bg-orange-100/70 border-orange-300 text-orange-700 hover:text-orange-800 transition-all duration-200"
+            data-testid="button-atxp-guides"
+          >
+            Access ATXP Guides
           </Button>
 
           <Button
