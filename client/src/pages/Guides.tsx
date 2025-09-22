@@ -7,26 +7,29 @@ import { Plus, Edit, Eye, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useProjectContext } from "@/components/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useWhiteLabel } from "@/contexts/WhiteLabelContext";
 import { useMemo } from "react";
 
 export default function Guides() {
   const { selectedProjectId } = useProjectContext();
   const { user, isAuthenticated } = useAuth();
+  const { isWhiteLabel, config } = useWhiteLabel();
   
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
   });
 
-  // Get user's projects to determine role
+  // Get user's projects to determine role (but only if authenticated and not in white-label mode)
   const { data: projects } = useQuery<Array<{id: number, userRole: string}>>(
-    { queryKey: ["/api/projects"], enabled: isAuthenticated }
+    { queryKey: ["/api/projects"], enabled: isAuthenticated && !isWhiteLabel }
   );
 
   // For now, use the first project's role (can be enhanced for multi-project context)
   const userRole = projects?.[0]?.userRole || 'user';
   
-  // Check if user can create/edit guides (admin, creator, or platform admin)
-  const canManageGuides = userRole === 'admin' || userRole === 'creator' || user?.isPlatformAdmin;
+  // Check if user can create/edit guides
+  // In white-label mode, users can never manage guides (read-only)
+  const canManageGuides = !isWhiteLabel && (userRole === 'admin' || userRole === 'creator' || user?.isPlatformAdmin);
 
   // Filter guides by selected project
   const guides = useMemo(() => {
