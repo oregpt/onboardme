@@ -31,7 +31,37 @@ export async function checkDomainMapping(): Promise<WhiteLabelConfig> {
     return domainMappingCache;
   }
 
-  // First try to read from injected script tag
+  // First priority: Check URL query parameters for white-label mode
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const wlMode = urlParams.get('wl');
+    
+    if (wlMode) {
+      console.log('🔍 Detected white-label mode from URL parameters:', wlMode);
+      
+      const config: WhiteLabelConfig = {
+        isWhiteLabel: true,
+        domain: urlParams.get('domain') || window.location.hostname,
+        feature: (urlParams.get('features') as any) || 'both',
+        routeMode: 'project_guides', // From URL parameter mode
+        projectId: urlParams.get('projectId') ? parseInt(urlParams.get('projectId')!) : undefined,
+        guideId: urlParams.get('guideId') ? parseInt(urlParams.get('guideId')!) : undefined,
+        theme: urlParams.get('theme') ? JSON.parse(decodeURIComponent(urlParams.get('theme')!)) : undefined
+      };
+      
+      console.log('✅ Using URL-based white-label config:', config);
+      
+      // Cache the result
+      domainMappingCache = config;
+      cacheTimestamp = now;
+      
+      return config;
+    }
+  } catch (error) {
+    console.warn('Failed to parse URL white-label parameters:', error);
+  }
+
+  // Second priority: Read from injected script tag
   try {
     const configScript = document.getElementById('white-label-config');
     if (configScript) {
@@ -116,6 +146,11 @@ export function applyWhiteLabelTheme(theme: any) {
 export function clearDomainMappingCache() {
   domainMappingCache = null;
   cacheTimestamp = 0;
+}
+
+// Clear cache on page load to ensure fresh detection
+if (typeof window !== 'undefined') {
+  clearDomainMappingCache();
 }
 
 // Get API endpoint prefix based on white-label mode
