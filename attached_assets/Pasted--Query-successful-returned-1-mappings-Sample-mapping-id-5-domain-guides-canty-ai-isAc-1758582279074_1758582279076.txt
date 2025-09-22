@@ -1,0 +1,70 @@
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+🔍 HTML injection check for: 05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev
+🗄️ getCustomDomainMappings called with projectId: undefined
+🔍 Querying all domain mappings
+✅ Query successful, returned 1 mappings
+📄 Sample mapping: { id: 5, domain: 'guides.canty.ai', isActive: true, projectId: 3 }
+❌ No domain mapping found for HTML injection
+11:04:27 PM [express] GET /api/auth/user 401 in 46ms :: {"message":"Unauthorized"}
