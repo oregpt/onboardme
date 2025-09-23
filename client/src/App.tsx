@@ -20,59 +20,77 @@ import AIGuideGenerator from "@/pages/AIGuideGenerator";
 import Admin from "@/pages/Admin";
 import DatabaseManagement from "@/pages/DatabaseManagement";
 
-function Router() {
+function AuthenticatedRouter() {
   const { isAuthenticated, isLoading } = useAuth();
-  const { isWhiteLabel, config, isLoading: whiteLabelLoading } = useWhiteLabel();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Switch>
+        <Route path="/" component={SimpleLanding} />
+        <Route path="/guide/:slug" component={GuideViewer} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
 
   return (
-    <Switch>
-      {(isLoading && !isWhiteLabel) || whiteLabelLoading ? (
-        <Route>
-          {() => (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          )}
-        </Route>
-      ) : isWhiteLabel ? (
-        // White-label mode: Show only Guides and Chat without authentication
-        <AppLayout isWhiteLabel={true} whiteLabelConfig={config}>
-          <Switch>
-            <Route path="/" component={Guides} />
-            <Route path="/guides" component={Guides} />
-            <Route path="/chat" component={Chat} />
-            <Route path="/guide/:slug" component={GuideViewer} />
-            <Route component={NotFound} />
-          </Switch>
-        </AppLayout>
-      ) : !isAuthenticated ? (
-        <>
-          <Route path="/" component={SimpleLanding} />
+    <AppLayout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/project/:projectId" component={ProjectDashboard} />
+        <Route path="/guides" component={Guides} />
+        <Route path="/chat" component={Chat} />
+        <Route path="/ai-generator" component={AIGuideGenerator} />
+        <Route path="/my-progress" component={MyProgress} />
+        <Route path="/users" component={UserProgress} />
+        <Route path="/admin" component={Admin} />
+        <Route path="/admin/:projectId" component={Admin} />
+        <Route path="/admin/database" component={DatabaseManagement} />
+        <Route path="/editor" component={GuideEditor} />
+        <Route path="/editor/:id" component={GuideEditor} />
+        <Route path="/guide/:slug" component={GuideViewer} />
+        <Route component={NotFound} />
+      </Switch>
+    </AppLayout>
+  );
+}
+
+function Router() {
+  const { isWhiteLabel, config, isLoading: whiteLabelLoading } = useWhiteLabel();
+
+  if (whiteLabelLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (isWhiteLabel) {
+    // White-label mode: Show only Guides and Chat without authentication
+    return (
+      <AppLayout isWhiteLabel={true} whiteLabelConfig={config}>
+        <Switch>
+          <Route path="/" component={Guides} />
+          <Route path="/guides" component={Guides} />
+          <Route path="/chat" component={Chat} />
           <Route path="/guide/:slug" component={GuideViewer} />
           <Route component={NotFound} />
-        </>
-      ) : (
-        <AppLayout>
-          <Switch>
-            <Route path="/" component={Dashboard} />
-            <Route path="/project/:projectId" component={ProjectDashboard} />
-            <Route path="/guides" component={Guides} />
-            <Route path="/chat" component={Chat} />
-            <Route path="/ai-generator" component={AIGuideGenerator} />
-            <Route path="/my-progress" component={MyProgress} />
-            <Route path="/users" component={UserProgress} />
-            <Route path="/admin" component={Admin} />
-            <Route path="/admin/:projectId" component={Admin} />
-            <Route path="/admin/database" component={DatabaseManagement} />
-            <Route path="/editor" component={GuideEditor} />
-            <Route path="/editor/:id" component={GuideEditor} />
-            <Route path="/guide/:slug" component={GuideViewer} />
-            <Route component={NotFound} />
-          </Switch>
-        </AppLayout>
-      )}
-    </Switch>
-  );
+        </Switch>
+      </AppLayout>
+    );
+  }
+
+  // Regular mode: Use authentication flow
+  return <AuthenticatedRouter />;
 }
 
 export default function App() {
