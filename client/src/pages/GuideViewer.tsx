@@ -30,9 +30,11 @@ export default function GuideViewer() {
   const slug = params?.slug;
 
   // Fetch guide by slug
-  const { data: guide, isLoading: guideLoading } = useQuery<Guide>({
+  const { data: guide, isLoading: guideLoading, error: guideError } = useQuery<Guide>({
     queryKey: ["/api/guides/slug", slug],
     enabled: !!slug,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Fetch flow boxes
@@ -103,10 +105,16 @@ export default function GuideViewer() {
     },
   });
 
-  if (guideLoading || flowBoxesLoading) {
+  // Show loading if we're still loading OR if we have an error and are retrying
+  if (guideLoading || flowBoxesLoading || (guideError && !guide)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground text-sm">
+            {guideError ? "Retrying..." : "Loading guide..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -118,9 +126,16 @@ export default function GuideViewer() {
           <CardContent className="pt-6 text-center">
             <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h1 className="text-xl font-bold text-foreground mb-2">Guide Not Found</h1>
-            <p className="text-muted-foreground">
-              The guide you're looking for doesn't exist or has been removed.
+            <p className="text-muted-foreground mb-4">
+              This guide may not exist or there was a temporary loading failure.
             </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              data-testid="button-reload"
+            >
+              Reload Page
+            </Button>
           </CardContent>
         </Card>
       </div>
