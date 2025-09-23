@@ -903,11 +903,33 @@ export class DatabaseStorage implements IStorage {
   // Custom domain operations
   async createCustomDomainMapping(mapping: InsertCustomDomainMapping): Promise<CustomDomainMapping> {
     const [newMapping] = await db.insert(customDomainMappings).values(mapping).returning();
+    // Clear cache when creating new mappings
+    this.clearDomainMappingsCache();
     return newMapping;
+  }
+
+  // Cache for domain mappings to avoid repeated database queries
+  private domainMappingsCache: { [key: string]: { data: CustomDomainMapping[], timestamp: number } } = {};
+  private readonly DOMAIN_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  private clearDomainMappingsCache() {
+    this.domainMappingsCache = {};
+    console.log('🗑️ Domain mappings cache cleared');
   }
 
   async getCustomDomainMappings(projectId?: number): Promise<CustomDomainMapping[]> {
     try {
+      // Create cache key
+      const cacheKey = projectId ? `project_${projectId}` : 'all';
+      const now = Date.now();
+      
+      // Check cache first
+      const cached = this.domainMappingsCache[cacheKey];
+      if (cached && (now - cached.timestamp) < this.DOMAIN_CACHE_DURATION) {
+        console.log('⚡ Using cached domain mappings for:', cacheKey);
+        return cached.data;
+      }
+
       console.log('🗄️ getCustomDomainMappings called with projectId:', projectId);
       let results;
       if (projectId) {
@@ -924,7 +946,14 @@ export class DatabaseStorage implements IStorage {
           .from(customDomainMappings)
           .orderBy(desc(customDomainMappings.createdAt));
       }
-      console.log('✅ Query successful, returned', results.length, 'mappings');
+      
+      // Cache the results
+      this.domainMappingsCache[cacheKey] = {
+        data: results,
+        timestamp: now
+      };
+      
+      console.log('✅ Query successful, returned', results.length, 'mappings (cached for 5 min)');
       if (results.length > 0) {
         console.log('📄 Sample mapping:', {
           id: results[0].id,
@@ -966,6 +995,8 @@ export class DatabaseStorage implements IStorage {
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(customDomainMappings.id, id))
       .returning();
+    // Clear cache when updating mappings
+    this.clearDomainMappingsCache();
     return updatedMapping;
   }
 
@@ -973,6 +1004,8 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(customDomainMappings)
       .where(eq(customDomainMappings.id, id));
+    // Clear cache when deleting mappings
+    this.clearDomainMappingsCache();
     return (result.rowCount ?? 0) > 0;
   }
 
