@@ -23,7 +23,7 @@ export async function apiRequest(
           url.startsWith('/api/projects') || 
           url.startsWith('/api/ai/chat') ||
           url.startsWith('/api/user-progress')) {
-        requestUrl = url.replace('/api/', '/public/');
+        requestUrl = url.replace('/api/', '/api-public/');
         console.log(`🔄 White-label mode: Routing ${url} → ${requestUrl}`);
       } else {
         console.warn(`⚠️ White-label mode: Endpoint ${url} not available in public API`);
@@ -72,7 +72,7 @@ export const getQueryFn: <T>(options: {
             url.startsWith('/api/projects') || 
             url.startsWith('/api/ai/chat') ||
             url.startsWith('/api/user-progress')) {
-          url = url.replace('/api/', '/public/');
+          url = url.replace('/api/', '/api-public/');
           console.log(`🔄 White-label query: Routing ${queryKey.join("/")} → ${url}`);
         } else {
           console.warn(`⚠️ White-label query: Endpoint ${url} not available in public API`);

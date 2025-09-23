@@ -1,0 +1,34 @@
+Detected white-label mode from URL parameters: project
+whiteLabelUtils.ts:52 ✅ Using URL-based white-label config: {isWhiteLabel: true, domain: '05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev', feature: 'both', routeMode: 'project_guides', projectId: 3, …}
+WhiteLabelContext.tsx:30 🔍 Initializing white-label context...
+queryClient.ts:78 ⚠️ White-label query: Endpoint /api/auth/user not available in public API
+(anonymous) @ queryClient.ts:78
+await in (anonymous)
+fetchFn @ @tanstack_react-query.js?v=a9f24446:840
+run @ @tanstack_react-query.js?v=a9f24446:494
+start @ @tanstack_react-query.js?v=a9f24446:536
+fetch @ @tanstack_react-query.js?v=a9f24446:926
+executeFetch_fn @ @tanstack_react-query.js?v=a9f24446:2211
+onSubscribe @ @tanstack_react-query.js?v=a9f24446:1898
+subscribe @ @tanstack_react-query.js?v=a9f24446:24
+(anonymous) @ @tanstack_react-query.js?v=a9f24446:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=a9f24446:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=a9f24446:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=a9f24446:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=a9f24446:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=a9f24446:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=a9f24446:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=a9f24446:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=a9f24446:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=a9f24446:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=a9f24446:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=a9f24446:19432
+commitRoot @ chunk-RPCDYKBN.js?v=a9f24446:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=a9f24446:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=a9f24446:18718
+workLoop @ chunk-RPCDYKBN.js?v=a9f24446:197
+flushWork @ chunk-RPCDYKBN.js?v=a9f24446:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=a9f24446:384Understand this warning
+WhiteLabelContext.tsx:39 🎨 Applying white-label theme
+WhiteLabelContext.tsx:43 ✅ White-label context initialized: {isWhiteLabel: true, domain: '05e7a6c7-68ab-4190-9838-8ab0c4661ad8-00-30kt3ykhftrtt.janeway.replit.dev', feature: 'both', routeMode: 'project_guides'}
+queryClient.ts:76 🔄 White-label query: Routing /api/guides → /api-public/guides

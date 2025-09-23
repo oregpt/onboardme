@@ -1380,7 +1380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('*', async (req, res, next) => {
     try {
       // Only process GET requests for HTML content
-      if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/public/') || req.path.includes('.')) {
+      if (req.method !== 'GET' || req.path.startsWith('/api/') || req.path.startsWith('/api-public/') || req.path.includes('.')) {
         return next();
       }
 
@@ -1436,7 +1436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==========================================
 
   // Middleware to ensure domain mapping exists and is valid for all public routes
-  app.use('/public/*', async (req, res, next) => {
+  app.use('/api-public/*', async (req, res, next) => {
     try {
       const hostname = (req.get('host')?.split(':')[0] || 
                        req.get('x-forwarded-host') || 
@@ -1475,7 +1475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get public guide by ID (domain-scoped)
-  app.get('/public/guide/:id', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
+  app.get('/api-public/guide/:id', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const mapping = res.locals.domainMapping;
@@ -1520,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get public guide by slug (domain-scoped)
-  app.get('/public/guide/slug/:slug', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
+  app.get('/api-public/guide/slug/:slug', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const slug = req.params.slug;
       const mapping = res.locals.domainMapping;
@@ -1576,7 +1576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get public guide by project and slug (domain-scoped)
-  app.get('/public/guide/:projectId/:slug', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
+  app.get('/api-public/guide/:projectId/:slug', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const slug = req.params.slug;
@@ -1615,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all public guides for a project (domain-scoped)
-  app.get('/public/guides/project/:projectId', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
+  app.get('/api-public/guides/project/:projectId', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
       const projectId = parseInt(req.params.projectId);
       const mapping = res.locals.domainMapping;
@@ -1645,7 +1645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get flow boxes for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/flowboxes', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
+  app.get('/api-public/guides/:guideId/flowboxes', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1692,7 +1692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get steps for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/steps', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
+  app.get('/api-public/guides/:guideId/steps', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1739,7 +1739,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get Q&A for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/qa', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
+  app.get('/api-public/guides/:guideId/qa', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1786,7 +1786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get knowledge base for public guide (domain-scoped)
-  app.get('/public/guides/:guideId/knowledge', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
+  app.get('/api-public/guides/:guideId/knowledge', createSecurityMiddleware(), createRateLimit(60), async (req, res) => {
     try {
       const guideId = parseInt(req.params.guideId);
       const mapping = res.locals.domainMapping;
@@ -1833,7 +1833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public AI Chat endpoint (for custom domains) - domain-scoped
-  app.post('/public/ai/chat', createSecurityMiddleware(), createRateLimit(30), async (req, res) => {
+  app.post('/api-public/ai/chat', createSecurityMiddleware(), createRateLimit(30), async (req, res) => {
     try {
       const { message, provider, guideId, flowBoxId, stepId } = req.body;
       const mapping = res.locals.domainMapping;
