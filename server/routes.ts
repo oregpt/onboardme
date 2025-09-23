@@ -1619,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const mapping = res.locals.domainMapping;
       
-      console.log('🔍 /api-public/guides called with mapping:', {
+      console.log('🚨 API-PUBLIC-GUIDES ENDPOINT HIT!', {
         projectId: mapping?.projectId,
         feature: mapping?.feature,
         routeMode: mapping?.routeMode
