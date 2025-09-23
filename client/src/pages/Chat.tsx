@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useWhiteLabel } from "@/contexts/WhiteLabelContext";
+import { useProjectContext } from "@/components/AppLayout";
 import { 
   MessageCircle, 
   Send, 
@@ -30,17 +32,26 @@ interface ChatMessage {
 export default function Chat() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const { isWhiteLabel } = useWhiteLabel();
+  const { selectedProjectId } = useProjectContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'xai'>('anthropic');
   const [selectedGuideId, setSelectedGuideId] = useState<string>('all');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get guides that user has access to
-  const { data: guides, isLoading: guidesLoading } = useQuery<Guide[]>({
+  // Get guides that user has access to (enable in white-label mode or when authenticated)
+  const { data: allGuides, isLoading: guidesLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],
-    enabled: isAuthenticated
+    enabled: isAuthenticated || isWhiteLabel
   });
+
+  // Filter guides by selected project (same logic as Guides component)
+  const guides = useMemo(() => {
+    if (!allGuides) return [];
+    if (!selectedProjectId) return allGuides; // Show all if no project selected
+    return allGuides.filter(guide => guide.projectId === selectedProjectId);
+  }, [allGuides, selectedProjectId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,7 +131,8 @@ export default function Chat() {
     setMessages([]);
   };
 
-  if (!isAuthenticated) {
+  // Only require authentication if NOT in white-label mode
+  if (!isAuthenticated && !isWhiteLabel) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
