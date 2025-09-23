@@ -24,8 +24,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onMobileClose, isWhiteLabel = false, whiteLabelConfig }: SidebarProps) {
+  console.log('🟨 [SIDEBAR] Sidebar started, isWhiteLabel:', isWhiteLabel);
   const [location] = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  
+  // Only call useAuth if NOT in white-label mode
+  const authResult = isWhiteLabel ? { user: null, isAuthenticated: false } : useAuth();
+  const { user, isAuthenticated } = authResult;
+  console.log('🟨 [SIDEBAR] Auth result:', { user: !!user, isAuthenticated, isWhiteLabel });
 
   // Get user's projects to determine role (skip in white-label mode)
   const { data: projects } = useQuery<Array<{id: number, userRole: string}>>(

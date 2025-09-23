@@ -12,8 +12,11 @@ import { useMemo } from "react";
 
 export default function Guides() {
   const { selectedProjectId } = useProjectContext();
-  const { user, isAuthenticated } = useAuth();
   const { isWhiteLabel, config } = useWhiteLabel();
+  
+  // Only call useAuth if NOT in white-label mode
+  const authResult = isWhiteLabel ? { user: null, isAuthenticated: false } : useAuth();
+  const { user, isAuthenticated } = authResult;
   
   const { data: allGuides, isLoading } = useQuery<Guide[]>({
     queryKey: ["/api/guides"],

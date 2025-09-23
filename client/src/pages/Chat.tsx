@@ -31,8 +31,11 @@ interface ChatMessage {
 
 export default function Chat() {
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
   const { isWhiteLabel } = useWhiteLabel();
+  
+  // Only call useAuth if NOT in white-label mode
+  const authResult = isWhiteLabel ? { user: null, isAuthenticated: false } : useAuth();
+  const { user, isAuthenticated } = authResult;
   const { selectedProjectId } = useProjectContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
