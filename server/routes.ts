@@ -1614,6 +1614,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all public guides (auto-scoped to domain mapping's project)
+  app.get('/api-public/guides', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
+    try {
+      const mapping = res.locals.domainMapping;
+      
+      console.log('🔍 /api-public/guides called with mapping:', {
+        projectId: mapping?.projectId,
+        feature: mapping?.feature,
+        routeMode: mapping?.routeMode
+      });
+      
+      // Ensure we have domain mapping context and guides feature is enabled
+      if (!mapping || (mapping.feature !== 'guides' && mapping.feature !== 'both')) {
+        console.log('❌ Domain mapping missing or guides not enabled');
+        return res.status(404).json({ message: "Guides not available" });
+      }
+      
+      // Ensure project guides mode with valid project ID
+      if (mapping.routeMode !== 'project_guides' || !mapping.projectId) {
+        console.log('❌ Invalid route mode or missing project ID');
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      console.log('🗄️ Fetching guides from database for project:', mapping.projectId);
+      const guides = await storage.getGuides();
+      console.log('✅ Database returned', guides.length, 'total guides');
+      
+      const publicGuides = guides.filter(g => 
+        g.projectId === mapping.projectId && g.isPublic
+      );
+      
+      console.log('✅ Filtered to', publicGuides.length, 'public guides for project', mapping.projectId);
+      if (publicGuides.length > 0) {
+        console.log('📋 Sample guide:', {
+          id: publicGuides[0].id,
+          title: publicGuides[0].title,
+          projectId: publicGuides[0].projectId,
+          isPublic: publicGuides[0].isPublic
+        });
+      }
+      
+      res.json(publicGuides);
+    } catch (error) {
+      console.error("❌ Error fetching public guides:", error);
+      res.status(500).json({ message: "Failed to fetch guides" });
+    }
+  });
+
   // Get all public guides for a project (domain-scoped)
   app.get('/api-public/guides/project/:projectId', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {
