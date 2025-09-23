@@ -30,11 +30,9 @@ export default function GuideViewer() {
   const slug = params?.slug;
 
   // Fetch guide by slug
-  const { data: guide, isLoading: guideLoading, error: guideError } = useQuery<Guide>({
+  const { data: guide, isLoading: guideLoading, refetch: refetchGuide } = useQuery<Guide>({
     queryKey: ["/api/guides/slug", slug],
     enabled: !!slug,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Fetch flow boxes
@@ -105,16 +103,10 @@ export default function GuideViewer() {
     },
   });
 
-  // Show loading if we're still loading OR if we have an error and are retrying
-  if (guideLoading || flowBoxesLoading || (guideError && !guide)) {
+  if (guideLoading || flowBoxesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
-          <p className="text-muted-foreground text-sm">
-            {guideError ? "Retrying..." : "Loading guide..."}
-          </p>
-        </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -129,13 +121,22 @@ export default function GuideViewer() {
             <p className="text-muted-foreground mb-4">
               This guide may not exist or there was a temporary loading failure.
             </p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              variant="outline"
-              data-testid="button-reload"
-            >
-              Reload Page
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => refetchGuide()} 
+                variant="outline"
+                data-testid="button-retry"
+              >
+                Retry
+              </Button>
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline"
+                data-testid="button-reload"
+              >
+                Reload Page
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
