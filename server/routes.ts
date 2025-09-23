@@ -237,10 +237,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const guideSlugMatch = internalPath.match(/^\/([a-z0-9-]+)$/);
             if (guideSlugMatch && mapping.projectId && acceptHeader.includes('text/html')) {
               const slug = guideSlugMatch[1];
-              // Additional check: ensure it's not an asset-like path
-              if (!slug.includes('.') && !['assets', 'vite', 'favicon', 'robots', 'manifest'].some(asset => slug.startsWith(asset))) {
+              // Skip special routes that are NOT guide slugs (guides, chat, etc.)
+              const reservedRoutes = ['guides', 'chat', 'assets', 'vite', 'favicon', 'robots', 'manifest'];
+              if (!slug.includes('.') && !reservedRoutes.some(route => slug === route)) {
                 console.log('📖 Project guides mode - redirecting to specific guide:', slug);
-                return res.redirect(`/public/guide/${mapping.projectId}/${slug}`);
+                return res.redirect(`/white-label/guide/slug/${slug}?wl=project&projectId=${mapping.projectId}`);
               }
             }
           }
