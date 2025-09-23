@@ -1614,6 +1614,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get basic project info for white-label mode
+  app.get('/api-public/projects/:id', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
+    try {
+      const projectId = parseInt(req.params.id);
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
+      console.log('🔍 Public API: Fetching project info for ID:', projectId);
+      
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        console.log('❌ Project not found:', projectId);
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Return only basic public information
+      const publicProject = {
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        isActive: project.isActive
+      };
+
+      console.log('✅ Returning public project info:', publicProject);
+      res.json(publicProject);
+    } catch (error) {
+      console.error('❌ Error fetching public project:', error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
   // Get all public guides (auto-scoped to domain mapping's project)
   app.get('/api-public/guides', createSecurityMiddleware(), createRateLimit(100), async (req, res) => {
     try {

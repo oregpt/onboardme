@@ -37,8 +37,17 @@ export function Sidebar({ onMobileClose, isWhiteLabel = false, whiteLabelConfig 
     { queryKey: ["/api/projects"], enabled: isAuthenticated && !isWhiteLabel }
   );
 
+  // Fetch project info for white-label mode
+  const { data: whiteLabelProject } = useQuery<{id: number, name: string, description?: string, isActive: boolean}>({
+    queryKey: ["/api-public/projects", whiteLabelConfig?.projectId],
+    enabled: isWhiteLabel && !!whiteLabelConfig?.projectId
+  });
+
   // For now, use the first project's role (can be enhanced for multi-project context)
   const userRole = projects?.[0]?.userRole || 'user';
+
+  // Determine display name for the app
+  const appDisplayName = isWhiteLabel ? (whiteLabelProject?.name || "onboardMe") : "onboardMe";
 
   const handleLogout = () => {
     window.location.href = '/api/logout';
@@ -110,7 +119,7 @@ export function Sidebar({ onMobileClose, isWhiteLabel = false, whiteLabelConfig 
             <BookOpen className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">onboardMe</h1>
+            <h1 className="text-lg font-semibold text-foreground">{appDisplayName}</h1>
           </div>
         </div>
       </div>
