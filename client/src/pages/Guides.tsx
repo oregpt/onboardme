@@ -69,7 +69,7 @@ export default function Guides() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-96 overflow-y-auto scrollbar-thin">
               {guides?.map((guide) => (
                 <Card key={guide.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
